@@ -1,0 +1,9 @@
+bip39
+*.bip39
+
+# Editors
+.vscode/
+.idea/
+
+# Dev artifacts
+coverage.out
