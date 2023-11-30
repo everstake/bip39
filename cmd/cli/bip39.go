@@ -167,7 +167,7 @@ func outputMnemonic(mnemonic string, salt string, seed []byte, colorWord string,
 	output := fmt.Sprintf("%s%s", outSeed, encodedHash)
 
 	if save == "yes" {
-		fmt.Print("File saved: " + hash + ".pib39\n\n")
+		fmt.Print("File saved: " + hash + ".bip39\n\n")
 		confirmSaveToFile(hash+".pib39", outMnemonic+output)
 	}
 
