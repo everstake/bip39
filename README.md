@@ -1,4 +1,6 @@
-# Console utility: bip39
+# Generation, verification of mnemonics and obtaining their hash in Argon2 format
+
+## Build
     go build cmd/cli/bip39.go
 
 ## BIP39 mnemonic generation
