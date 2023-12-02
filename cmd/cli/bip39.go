@@ -10,29 +10,42 @@ import (
 	"go-bip39"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/term"
-	"log"
 	"math/rand"
 	"os"
+	"path"
 	"strings"
 	"syscall"
 	"time"
 )
 
-func wordsToEntropyBits(wordCount int) (int, error) {
-	switch wordCount {
-	case 12:
-		return 128, nil
-	//case 15:
-	//	return 160, nil
-	//case 18:
-	//	return 192, nil
-	//case 21:
-	//	return 224, nil
-	case 24:
-		return 256, nil
-	default:
-		return 0, fmt.Errorf("unsupported word count")
+var (
+	t = time.Now().UnixNano()
+	r = rand.New(rand.NewSource(t))
+)
+
+type hashParams struct {
+	hashTime    uint32
+	hashMemory  uint32
+	hashThreads uint8
+	hashKeyLen  uint32
+}
+
+func clearInput(input string) {
+	cursorPosition := len(input)
+	fmt.Print("\r")
+	for i := 0; i < cursorPosition; i++ {
+		fmt.Print(" ")
 	}
+	fmt.Print("\r")
+}
+
+func randomCharset(length int) string {
+	rCharset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = rCharset[r.Intn(len(rCharset))]
+	}
+	return string(b)
 }
 
 func wordColor(word string, color string) string {
@@ -56,28 +69,25 @@ func wordColor(word string, color string) string {
 		"light-white":   107,
 	}
 
-	if colors[color] != 0 {
-		return fmt.Sprintf("\x1b[%dm", colors[color]) + word + "\x1b[0m"
-	} else {
-		return word
+	code, exists := colors[color]
+	if exists {
+		return fmt.Sprintf("\x1b[%dm%s\x1b[0m", code, word)
 	}
+
+	return word
 }
 
-func randomCharset(length int) string {
-	rCharset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = rCharset[r.Intn(len(rCharset))]
+func wordsToEntropyBits(wordCount int) (int, error) {
+	wordToBits := map[int]int{
+		12: 128,
+		24: 256,
 	}
-	return string(b)
-}
 
-type hashParams struct {
-	hashTime    uint32
-	hashMemory  uint32
-	hashThreads uint8
-	hashKeyLen  uint32
+	bits, ok := wordToBits[wordCount]
+	if !ok {
+		return 0, fmt.Errorf("unsupported word count")
+	}
+	return bits, nil
 }
 
 func argon2Encode(data string, salt string) (string, string) {
@@ -107,43 +117,70 @@ func argon2Encode(data string, salt string) (string, string) {
 	return output, hex.EncodeToString(hash)
 }
 
-func saveToFile(filePath string, data string) {
+func saveToFile(filePath string, data string) error {
 	file, err := os.Create(filePath)
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return fmt.Errorf("cannot create file: %w", err)
 	}
 
 	defer file.Close()
 
 	_, err = file.WriteString(data)
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return fmt.Errorf("cannot write to file: %w", err)
 	}
+
+	err = file.Chmod(0400)
+	if err != nil {
+		return fmt.Errorf("cannot set permission to file: %w", err)
+	}
+
+	return nil
 }
 
 func confirmSaveToFile(filePath string, data string) {
 	if _, err := os.Stat(filePath); err == nil {
-		fmt.Println("The file already exists. Do you want to overwrite it? (yes/no):")
+		fmt.Printf("The file already exists: %s\n", filePath)
+		defaultAnswer := "no"
+		for {
+			fmt.Printf("Do you want to overwrite it? (yes/no): [%s]\n", defaultAnswer)
 
-		reader := bufio.NewReader(os.Stdin)
-		answer, _ := reader.ReadString('\n')
-		answer = strings.TrimSpace(answer)
+			reader := bufio.NewReader(os.Stdin)
+			answer, _ := reader.ReadString('\n')
+			answer = strings.TrimSpace(answer)
 
-		if answer == "yes" {
-			saveToFile(filePath, data)
-		} else {
-			fmt.Print("File will not be overwritten.\n\n")
+			if answer == "" {
+				answer = defaultAnswer
+			}
+
+			if answer == "yes" || answer == "no" {
+				if answer == "yes" {
+					if err := saveToFile(filePath, data); err == nil {
+						fmt.Printf("File saved: %s\n\n", filePath)
+					} else {
+						fmt.Printf("Error while saving the file: %s\n\n", err)
+					}
+				}
+				if answer == "no" {
+					fmt.Print("File will not be overwritten.\n\n")
+				}
+				break
+			} else {
+				fmt.Println("Invalid value. Please enter 'yes' or 'no'.")
+			}
 		}
 	} else if os.IsNotExist(err) {
-		saveToFile(filePath, data)
+		if err := saveToFile(filePath, data); err == nil {
+			fmt.Printf("File saved: %s\n\n", filePath)
+		} else {
+			fmt.Printf("Error while saving the file: %s\n\n", err)
+		}
 	} else {
-		fmt.Println("Error during file check:", err)
+		fmt.Printf("Error during file check: %s\n\n", err)
 	}
 }
 
-func outputMnemonic(mnemonic string, salt string, seed []byte, colorWord string, save string) string {
+func outputInfo(mnemonic string, salt string, colorWord string, save string, savePath string) string {
 	var outColorBuffer bytes.Buffer
 
 	mnemonicList := strings.Split(mnemonic, " ")
@@ -162,42 +199,27 @@ func outputMnemonic(mnemonic string, salt string, seed []byte, colorWord string,
 		outColorBuffer.WriteString(fmt.Sprintf("%s ", mnemonicList[i]))
 	}
 	outColorBuffer.WriteString(fmt.Sprintf("%s\n", wordColor(mnemonicList[mnemonicLastIndex], lastWordColor)))
-	outSeed := fmt.Sprintf("Seed:\n%s\n", hex.EncodeToString(seed))
-
-	output := fmt.Sprintf("%s%s", outSeed, encodedHash)
 
 	if save == "yes" {
-		fmt.Print("File saved: " + hash + ".bip39\n\n")
-		confirmSaveToFile(hash+".pib39", outMnemonic+output)
+		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", path.Join(savePath), hash, t, "bip39"), outMnemonic+encodedHash)
 	}
 
 	if save == "no" {
 		fmt.Print("File not saved. Only output.\n\n")
 	}
 
-	return outColorBuffer.String() + output
+	return outColorBuffer.String() + encodedHash
 }
 
-func generateMnemonic(bitSize int, colorWord string, save string) {
+func generateMnemonic(bitSize int, colorWord string, save string, savePath string) string {
 	salt := randomCharset(24)
 	entropy, _ := bip39.NewEntropy(bitSize)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	seed := bip39.NewSeed(mnemonic, salt)
-	output := outputMnemonic(mnemonic, salt, seed, colorWord, save)
-
-	fmt.Print(output)
+	output := outputInfo(mnemonic, salt, colorWord, save, savePath)
+	return output
 }
 
-func clearInput(input string) {
-	cursorPosition := len(input)
-	fmt.Print("\r")
-	for i := 0; i < cursorPosition; i++ {
-		fmt.Print(" ")
-	}
-	fmt.Print("\r")
-}
-
-func existingMnemonic(colorWord string, save string) {
+func existingMnemonic(colorWord string, save string, savePath string) string {
 	fmt.Print("Enter Mnemonic: ")
 	mnemonic, err := term.ReadPassword(syscall.Stdin)
 	trimMnemonic := strings.TrimSpace(string(mnemonic))
@@ -227,70 +249,80 @@ func existingMnemonic(colorWord string, save string) {
 	}
 	clearInput(string(salt))
 
-	seed := bip39.NewSeed(trimMnemonic, trimSalt)
-	output := outputMnemonic(trimMnemonic, trimSalt, seed, colorWord, save)
+	output := outputInfo(trimMnemonic, trimSalt, colorWord, save, savePath)
 
-	fmt.Print(output)
+	return output
 }
 
 func main() {
+	colorUsage := "First and last word color highlighting\n" +
+		"\tAllowed colors: default, black, red, green, yellow, blue, magenta, cyan, white,\n" +
+		"\tlight-gray, light-red, light-green, light-yellow, light-blue, light-magenta, light-cyan, light-white"
+
+	mainUsage := "--words-color value\t" + colorUsage + "\n" +
+		"--save value\tSave to file (yes/no)\n\tFile name format: <Argon2 Hash>_<Timestamp UnixNano>.bip39\n" +
+		"--save-dir value\tSave file to directory"
+
 	app := &cli.App{
+		Usage: "Generation, verification of mnemonics and obtaining their hash in Argon2 format",
 		Commands: []*cli.Command{
 			{
-				Name:    "generate",
-				Aliases: []string{"g"},
-				Usage:   "BIP39 generator",
+				Name:  "generate",
+				Usage: "Generate mnemonic\n--words value\tWord count\n" + mainUsage,
 				Flags: []cli.Flag{
-					&cli.IntFlag{Name: "words", Aliases: []string{"w"}, Value: 24},
+					&cli.IntFlag{Name: "words", Value: 24},
 					&cli.StringFlag{
-						Name:    "words-color",
-						Aliases: []string{"c"},
-						Value:   "green,blue",
-						Usage: "First and last word color highlighting\n" +
-							"Allowed colors: default, black, red, green, yellow, blue, magenta, cyan, white," +
-							"light-gray, light-red,\nlight-green, light-yellow, light-blue, light-magenta," +
-							"light-cyan, light-white",
+						Name:  "words-color",
+						Value: "green,blue",
 					},
 					&cli.StringFlag{
-						Name:    "save",
-						Aliases: []string{"s"},
-						Value:   "yes",
-						Usage:   "Save to file (yes/no): <Argon2 Hash>.bip39",
+						Name:  "save",
+						Value: "yes",
+					},
+					&cli.StringFlag{
+						Name:  "save-dir",
+						Value: ".",
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					words, err := wordsToEntropyBits(cCtx.Int("words"))
-					if err != nil {
-						fmt.Println("Error:", err)
+					words, _ := wordsToEntropyBits(cCtx.Int("words"))
+					wordsColorFlag := strings.TrimSpace(cCtx.String("words-color"))
+					saveFlag := strings.TrimSpace(cCtx.String("save"))
+					saveDirFlag := strings.TrimSpace(cCtx.String("save-dir"))
+					if saveFlag == "yes" || saveFlag == "no" {
+						fmt.Print(generateMnemonic(words, wordsColorFlag, saveFlag, saveDirFlag))
 					} else {
-						generateMnemonic(words, cCtx.String("words-color"), cCtx.String("save"))
+						return cli.Exit("Invalid value. Please enter 'yes' or 'no'.", 1)
 					}
 					return nil
 				},
 			},
 			{
-				Name:    "existing-mnemonic",
-				Aliases: []string{"e"},
-				Usage:   "Check existing BIP39 mnemonic",
+				Name:  "existing",
+				Usage: "Check existing BIP39 mnemonic\n" + mainUsage,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:    "words-color",
-						Aliases: []string{"c"},
-						Value:   "green,blue",
-						Usage: "First and last word color highlighting\n" +
-							"Allowed colors: default, black, red, green, yellow, blue, magenta, cyan, white," +
-							"light-gray, light-red,\nlight-green, light-yellow, light-blue, light-magenta," +
-							"light-cyan, light-white",
+						Name:  "words-color",
+						Value: "green,blue",
 					},
 					&cli.StringFlag{
-						Name:    "save",
-						Aliases: []string{"s"},
-						Value:   "no",
-						Usage:   "Save to file (yes/no): <Argon2 Hash>.bip39",
+						Name:  "save",
+						Value: "no",
+					},
+					&cli.StringFlag{
+						Name:  "save-dir",
+						Value: ".",
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					existingMnemonic(cCtx.String("words-color"), cCtx.String("save"))
+					wordsColorFlag := strings.TrimSpace(cCtx.String("words-color"))
+					saveFlag := strings.TrimSpace(cCtx.String("save"))
+					saveDirFlag := strings.TrimSpace(cCtx.String("save-dir"))
+					if saveFlag == "yes" || saveFlag == "no" {
+						fmt.Print(existingMnemonic(wordsColorFlag, saveFlag, saveDirFlag))
+					} else {
+						return cli.Exit("Invalid value. Please enter 'yes' or 'no'.", 1)
+					}
 					return nil
 				},
 			},
@@ -298,6 +330,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 }
