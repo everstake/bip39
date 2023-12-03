@@ -107,17 +107,21 @@ func argon2Encode(data string, salt string) (string, string) {
 }
 
 func saveToFile(filePath string, data string) error {
+	// Open the file at the specified filePath in write-only mode, create if it doesn't exist,
+	// and set file permissions to 0600 (read-write for owner only)
 	fd, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return fmt.Errorf("cannot create and set permission to file: %w", err)
 	}
 	defer fd.Close()
 
+	// Write the data to the file
 	n, err := fd.Write([]byte(data))
 	if err != nil {
 		return fmt.Errorf("cannot write to file: %w", err)
 	}
 
+	// Check if the number of bytes written doesn't match the length of the data
 	if n != len(data) {
 		return fmt.Errorf("incomplete write: %d/%d bytes written", n, len(data))
 	}
@@ -172,6 +176,7 @@ func outputMnemonic(mnemonic string, salt string, colorWord string, save string,
 	outColorMnemonic := outputColoredMnemonic(mnemonicList, colorWord)
 	outFileMnemonic := outMnemonic + encodedHash
 
+	// If save is set to "yes", save the outFileMnemonic to a file
 	if save == "yes" {
 		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", path.Join(savePath), hash, t, "bip39"), outFileMnemonic)
 	} else if save == "no" {
@@ -186,12 +191,17 @@ func outputColoredMnemonic(mnemonicList []string, colorWord string) string {
 
 	colors := strings.Split(colorWord, ",")
 
+	// Set default colors for the first and last words
 	firstWordColor, lastWordColor := "default", "default"
 	if len(colors) == 2 {
 		firstWordColor = colors[0]
 		lastWordColor = colors[1]
 	}
+
+	// Calculate the last index of the mnemonicList
 	mnemonicLastIndex := len(mnemonicList) - 1
+
+	// Construct the formatted string with colored first and last words
 	outColorBuffer.WriteString(fmt.Sprintf("Mnemonic:\n%s ", wordColor(mnemonicList[0], firstWordColor)))
 	for i := 1; i < mnemonicLastIndex; i++ {
 		outColorBuffer.WriteString(fmt.Sprintf("%s ", mnemonicList[i]))
