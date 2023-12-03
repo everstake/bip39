@@ -28,15 +28,6 @@ type hashParams struct {
 	hashKeyLen  uint32
 }
 
-func clearInput(input string) {
-	cursorPosition := len(input)
-	fmt.Print("\r")
-	for i := 0; i < cursorPosition; i++ {
-		fmt.Print(" ")
-	}
-	fmt.Print("\r")
-}
-
 func randomCharset(length int) string {
 	rCharset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, length)
@@ -178,7 +169,7 @@ func outputMnemonic(mnemonic string, salt string, colorWord string, save string,
 	mnemonicList := strings.Split(mnemonic, " ")
 	encodedHash, hash := argon2Encode(mnemonic, salt)
 	outMnemonic := fmt.Sprintf("Mnemonic:\n%s\n", strings.Join(mnemonicList, " "))
-	outColorMnemonic := writeColoredMnemonic(mnemonicList, colorWord)
+	outColorMnemonic := outputColoredMnemonic(mnemonicList, colorWord)
 	outFileMnemonic := outMnemonic + encodedHash
 
 	if save == "yes" {
@@ -190,7 +181,7 @@ func outputMnemonic(mnemonic string, salt string, colorWord string, save string,
 	return outColorMnemonic + encodedHash
 }
 
-func writeColoredMnemonic(mnemonicList []string, colorWord string) string {
+func outputColoredMnemonic(mnemonicList []string, colorWord string) string {
 	var outColorBuffer bytes.Buffer
 
 	colors := strings.Split(colorWord, ",")
