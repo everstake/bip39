@@ -21,6 +21,7 @@ var (
 	r = rand.New(rand.NewSource(t))
 )
 
+// Is a struct that defines parameters for Argon2 hashing algorithm.
 type hashParams struct {
 	hashTime    uint32
 	hashMemory  uint32
