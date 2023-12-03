@@ -29,15 +29,23 @@ type hashParams struct {
 }
 
 func randomCharset(length int) string {
+	// Predefined character set containing letters (both cases) and digits
 	rCharset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	// Create a byte slice of the specified length
 	b := make([]byte, length)
+
+	// Fill each position in the byte slice with a randomly selected character from the 'rCharset'
 	for i := range b {
 		b[i] = rCharset[r.Intn(len(rCharset))]
 	}
+
+	// Convert the byte slice to a string and return the generated random string
 	return string(b)
 }
 
 func wordColor(word string, color string) string {
+	// Map containing color names and their corresponding ANSI color codes
 	colors := map[string]int{
 		"black":         40,
 		"red":           41,
@@ -58,28 +66,37 @@ func wordColor(word string, color string) string {
 		"light-white":   107,
 	}
 
+	// Check if the provided color string exists in the 'colors' map
 	code, exists := colors[color]
 	if exists {
+		// Apply the ANSI color code to the word and return the formatted word
 		return fmt.Sprintf("\x1b[%dm%s\x1b[0m", code, word)
 	}
 
+	// Return the word with color formatting if the provided color is supported
 	return word
 }
 
 func wordsToEntropyBits(wordCount int) (int, error) {
+	// Map specifying supported word counts and their equivalent entropy bits
 	wordToBits := map[int]int{
 		12: 128,
 		24: 256,
 	}
 
+	// Retrieve the entropy bits for the given word count from the map
 	bits, ok := wordToBits[wordCount]
 	if !ok {
+		// If the word count is not supported, return an error
 		return 0, fmt.Errorf("unsupported word count")
 	}
+
+	// Return the corresponding entropy bits for the provided word count
 	return bits, nil
 }
 
 func argon2Encode(data string, salt string) (string, string) {
+	// Define hashing parameters for Argon2
 	p := &hashParams{
 		hashTime:    1,
 		hashMemory:  64 * 1024,
@@ -87,8 +104,13 @@ func argon2Encode(data string, salt string) (string, string) {
 		hashKeyLen:  32,
 	}
 
+	// Generate the Argon2 hash using IDKey function
 	hash := argon2.IDKey([]byte(data), []byte(salt), p.hashTime, p.hashMemory, p.hashThreads, p.hashKeyLen)
+
+	// Encode the salt and hash into base64 format
 	b64Salt := base64.RawStdEncoding.EncodeToString([]byte(salt))
+
+	// Construct information about the Argon2 hash and its parameters
 	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
 	argon2output := []string{
 		"Argon2 Hash\n---",
@@ -101,8 +123,10 @@ func argon2Encode(data string, salt string) (string, string) {
 		fmt.Sprintf("Encoded:\t$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", argon2.Version, p.hashMemory, p.hashTime, p.hashThreads, b64Salt, b64Hash),
 	}
 
+	// Construct the output string containing Argon2 hash information
 	output := fmt.Sprintf("\n%s\n", strings.Join(argon2output, "\n"))
 
+	// Return the constructed output string and the hash in hexadecimal format
 	return output, hex.EncodeToString(hash)
 }
 
@@ -215,6 +239,8 @@ func generateMnemonic(bitSize int, colorWord string, save string, savePath strin
 	salt := randomCharset(24)
 	entropy, _ := bip39.NewEntropy(bitSize)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
+
+	// Generate and output mnemonic information
 	return outputMnemonic(mnemonic, salt, colorWord, save, savePath)
 }
 
