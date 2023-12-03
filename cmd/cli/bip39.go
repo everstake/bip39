@@ -9,12 +9,10 @@ import (
 	"github.com/urfave/cli/v2"
 	"go-bip39"
 	"golang.org/x/crypto/argon2"
-	"golang.org/x/term"
 	"math/rand"
 	"os"
 	"path"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -118,140 +116,154 @@ func argon2Encode(data string, salt string) (string, string) {
 }
 
 func saveToFile(filePath string, data string) error {
-	file, err := os.Create(filePath)
+	fd, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return fmt.Errorf("cannot create file: %w", err)
+		return fmt.Errorf("cannot create and set permission to file: %w", err)
 	}
+	defer fd.Close()
 
-	defer file.Close()
-
-	_, err = file.WriteString(data)
+	n, err := fd.Write([]byte(data))
 	if err != nil {
 		return fmt.Errorf("cannot write to file: %w", err)
 	}
 
-	err = file.Chmod(0400)
-	if err != nil {
-		return fmt.Errorf("cannot set permission to file: %w", err)
+	if n != len(data) {
+		return fmt.Errorf("incomplete write: %d/%d bytes written", n, len(data))
 	}
 
 	return nil
 }
 
 func confirmSaveToFile(filePath string, data string) {
-	if _, err := os.Stat(filePath); err == nil {
-		fmt.Printf("The file already exists: %s\n", filePath)
-		defaultAnswer := "no"
-		for {
-			fmt.Printf("Do you want to overwrite it? (yes/no): [%s]\n", defaultAnswer)
-
-			reader := bufio.NewReader(os.Stdin)
-			answer, _ := reader.ReadString('\n')
-			answer = strings.TrimSpace(answer)
-
-			if answer == "" {
-				answer = defaultAnswer
-			}
-
-			if answer == "yes" || answer == "no" {
-				if answer == "yes" {
-					if err := saveToFile(filePath, data); err == nil {
-						fmt.Printf("File saved: %s\n\n", filePath)
-					} else {
-						fmt.Printf("Error while saving the file: %s\n\n", err)
-					}
-				}
-				if answer == "no" {
-					fmt.Print("File will not be overwritten.\n\n")
-				}
-				break
+	_, err := os.Stat(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File doesn't exist, simply save the data
+			if err := saveToFile(filePath, data); err == nil {
+				fmt.Printf("File saved: %s\n\n", filePath)
 			} else {
-				fmt.Println("Invalid value. Please enter 'yes' or 'no'.")
+				fmt.Printf("Error while saving the file: %s\n\n", err)
 			}
-		}
-	} else if os.IsNotExist(err) {
-		if err := saveToFile(filePath, data); err == nil {
-			fmt.Printf("File saved: %s\n\n", filePath)
+			return
 		} else {
-			fmt.Printf("Error while saving the file: %s\n\n", err)
+			fmt.Printf("Error during file check: %s\n\n", err)
+			return
 		}
-	} else {
-		fmt.Printf("Error during file check: %s\n\n", err)
+	}
+
+	// File exists, prompt for overwrite confirmation
+	fmt.Printf("The file already exists: %s\n", filePath)
+	for {
+		var answer string
+		fmt.Printf("Do you want to overwrite it? (yes/no) [no]: ")
+		fmt.Scanln(&answer)
+
+		if answer == "yes" {
+			if err := saveToFile(filePath, data); err == nil {
+				fmt.Printf("File saved: %s\n\n", filePath)
+			} else {
+				fmt.Printf("Error while saving the file: %s\n\n", err)
+			}
+			break
+		} else if answer == "no" || answer == "" {
+			fmt.Print("File will not be overwritten.\n\n")
+			break
+		} else {
+			fmt.Println("Invalid value. Please enter 'yes' or 'no'.")
+		}
 	}
 }
 
-func outputInfo(mnemonic string, salt string, colorWord string, save string, savePath string) string {
+func outputMnemonic(mnemonic string, salt string, colorWord string, save string, savePath string) string {
+	mnemonicList := strings.Split(mnemonic, " ")
+	encodedHash, hash := argon2Encode(mnemonic, salt)
+	outMnemonic := fmt.Sprintf("Mnemonic:\n%s\n", strings.Join(mnemonicList, " "))
+	outColorMnemonic := writeColoredMnemonic(mnemonicList, colorWord)
+	outFileMnemonic := outMnemonic + encodedHash
+
+	if save == "yes" {
+		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", path.Join(savePath), hash, t, "bip39"), outFileMnemonic)
+	} else if save == "no" {
+		fmt.Print("File not saved. Only output.\n\n")
+	}
+
+	return outColorMnemonic + encodedHash
+}
+
+func writeColoredMnemonic(mnemonicList []string, colorWord string) string {
 	var outColorBuffer bytes.Buffer
 
-	mnemonicList := strings.Split(mnemonic, " ")
-	mnemonicLastIndex := len(mnemonicList) - 1
-	encodedHash, hash := argon2Encode(mnemonic, salt)
 	colors := strings.Split(colorWord, ",")
 
 	firstWordColor, lastWordColor := "default", "default"
 	if len(colors) == 2 {
-		firstWordColor, lastWordColor = colors[0], colors[1]
+		firstWordColor = colors[0]
+		lastWordColor = colors[1]
 	}
-
-	outMnemonic := fmt.Sprintf("Mnemonic:\n%s\n", strings.Join(mnemonicList, " "))
+	mnemonicLastIndex := len(mnemonicList) - 1
 	outColorBuffer.WriteString(fmt.Sprintf("Mnemonic:\n%s ", wordColor(mnemonicList[0], firstWordColor)))
 	for i := 1; i < mnemonicLastIndex; i++ {
 		outColorBuffer.WriteString(fmt.Sprintf("%s ", mnemonicList[i]))
 	}
 	outColorBuffer.WriteString(fmt.Sprintf("%s\n", wordColor(mnemonicList[mnemonicLastIndex], lastWordColor)))
 
-	if save == "yes" {
-		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", path.Join(savePath), hash, t, "bip39"), outMnemonic+encodedHash)
-	}
-
-	if save == "no" {
-		fmt.Print("File not saved. Only output.\n\n")
-	}
-
-	return outColorBuffer.String() + encodedHash
+	return outColorBuffer.String()
 }
 
 func generateMnemonic(bitSize int, colorWord string, save string, savePath string) string {
 	salt := randomCharset(24)
 	entropy, _ := bip39.NewEntropy(bitSize)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	output := outputInfo(mnemonic, salt, colorWord, save, savePath)
-	return output
+	return outputMnemonic(mnemonic, salt, colorWord, save, savePath)
 }
 
 func existingMnemonic(colorWord string, save string, savePath string) string {
+	// Prompt for and validate mnemonic
 	fmt.Print("Enter Mnemonic: ")
-	mnemonic, err := term.ReadPassword(syscall.Stdin)
-	trimMnemonic := strings.TrimSpace(string(mnemonic))
-	if len(trimMnemonic) == 0 {
-		err = fmt.Errorf("mnemonic can't be empty %v", string(mnemonic))
-	}
+	mnemonic, err := promptAndValidateMnemonic()
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 
-	if bip39.IsMnemonicValid(trimMnemonic) == false {
-		fmt.Println("mnemonic is not valid")
-		os.Exit(1)
-	}
-	clearInput(string(mnemonic))
-
+	// Prompt for and validate salt
 	fmt.Print("Enter Salt: ")
-	salt, err := term.ReadPassword(syscall.Stdin)
-	trimSalt := strings.TrimSpace(string(salt))
-	if len(trimSalt) == 0 {
-		err = fmt.Errorf("salt can't be empty %v", salt)
-	}
+	salt, err := promptAndValidateSalt()
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	clearInput(string(salt))
 
-	output := outputInfo(trimMnemonic, trimSalt, colorWord, save, savePath)
+	// Generate and output mnemonic information
+	return outputMnemonic(mnemonic, salt, colorWord, save, savePath)
+}
 
-	return output
+func promptAndValidateMnemonic() (string, error) {
+	inputReader := bufio.NewReader(os.Stdin)
+	input, _ := inputReader.ReadString('\n')
+	trimMnemonic := strings.TrimSpace(input)
+
+	if len(trimMnemonic) == 0 {
+		return "", fmt.Errorf("mnemonic can't be empty")
+	}
+
+	if !bip39.IsMnemonicValid(trimMnemonic) {
+		return "", fmt.Errorf("mnemonic is not valid")
+	}
+
+	return trimMnemonic, nil
+}
+
+func promptAndValidateSalt() (string, error) {
+	inputReader := bufio.NewReader(os.Stdin)
+	input, _ := inputReader.ReadString('\n')
+	trimSalt := strings.TrimSpace(input)
+
+	if len(trimSalt) == 0 {
+		return "", fmt.Errorf("salt can't be empty")
+	}
+
+	return trimSalt, nil
 }
 
 func main() {
@@ -268,7 +280,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:  "generate",
-				Usage: "Generate mnemonic\n--words value\tWord count\n" + mainUsage,
+				Usage: "BIP39 mnemonic generation\n--words value\tWord count\n" + mainUsage,
 				Flags: []cli.Flag{
 					&cli.IntFlag{Name: "words", Value: 24},
 					&cli.StringFlag{
