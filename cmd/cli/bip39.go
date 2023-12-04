@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"go-bip39"
 	"golang.org/x/crypto/argon2"
+	"log"
 	"math/rand"
 	"os"
 	"os/user"
@@ -29,11 +30,6 @@ type hashParams struct {
 	hashMemory  uint32
 	hashThreads uint8
 	hashKeyLen  uint32
-}
-
-func printError(err interface{}) {
-	fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	os.Exit(1)
 }
 
 func randomCharset(length int) string {
@@ -96,7 +92,7 @@ func wordsToEntropyBits(wordCount int) int {
 	bits, ok := wordToBits[wordCount]
 	if !ok {
 		// If the word count is not supported, return an error
-		printError("unsupported word count")
+		log.Fatal("error: unsupported word count")
 	}
 
 	// Return the corresponding entropy bits for the provided word count
@@ -142,7 +138,7 @@ func constructHomeBip39Dir(dir string) string {
 	// Get information about the current user
 	currentUser, err := user.Current()
 	if err != nil {
-		printError(err)
+		log.Fatalf("error: %v", err)
 	}
 
 	// Create the full path by joining the home directory path with the new directory name
@@ -157,7 +153,7 @@ func checkAndCreateDir(dir string) {
 		// Create the directory
 		err = os.MkdirAll(dir, 0755) // 0755 sets permissions for the new directory
 		if err != nil {
-			printError("creating directory")
+			log.Fatalf("error: %v", err)
 		}
 	}
 }
@@ -167,7 +163,7 @@ func saveToFile(filePath string, data string) error {
 	// and set file permissions to 0600 (read-write for owner only)
 	fd, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return fmt.Errorf("Error: cannot create and set permission to file: %w", err)
+		return fmt.Errorf("cannot create and set permission to file: %w", err)
 	}
 	defer fd.Close()
 
@@ -191,14 +187,14 @@ func confirmSaveToFile(filePath string, data string) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// File doesn't exist, simply save the data
-			if err := saveToFile(filePath, data); err == nil {
+			if err = saveToFile(filePath, data); err == nil {
 				fmt.Printf("File saved: %s\n\n", filePath)
 			} else {
-				fmt.Printf("Error while saving the file: %s\n\n", err)
+				log.Fatalf("error: while saving the file: %s\n\n", err)
 			}
 			return
 		} else {
-			fmt.Printf("Error during file check: %s\n\n", err)
+			log.Fatalf("error: during file check: %s\n\n", err)
 			return
 		}
 	}
@@ -211,10 +207,10 @@ func confirmSaveToFile(filePath string, data string) {
 		fmt.Scanln(&answer)
 
 		if answer == "yes" {
-			if err := saveToFile(filePath, data); err == nil {
+			if err = saveToFile(filePath, data); err == nil {
 				fmt.Printf("File saved: %s\n\n", filePath)
 			} else {
-				printError(fmt.Sprintf("Error while saving the file: %s\n\n", err))
+				log.Fatalf("error: while saving the file: %s\n\n", err)
 			}
 			break
 		} else if answer == "no" || answer == "" {
@@ -282,14 +278,14 @@ func existingMnemonic(colorWord string, save string, savePath string) string {
 	fmt.Print("Enter Mnemonic: ")
 	mnemonic, err := promptAndValidateMnemonic()
 	if err != nil {
-		printError(err)
+		log.Fatalf("error: %v", err)
 	}
 
 	// Prompt for and validate salt
 	fmt.Print("Enter Salt: ")
 	salt, err := promptAndValidateSalt()
 	if err != nil {
-		printError(err)
+		log.Fatalf("error: %v", err)
 	}
 
 	// Generate and output mnemonic information
@@ -410,6 +406,6 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		printError(err)
+		log.Fatalf("error: %v", err)
 	}
 }
