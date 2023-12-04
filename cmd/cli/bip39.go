@@ -192,32 +192,30 @@ func confirmSaveToFile(filePath string, data string) {
 			} else {
 				log.Fatalf("error: while saving the file: %s\n\n", err)
 			}
-			return
 		} else {
 			log.Fatalf("error: during file check: %s\n\n", err)
-			return
 		}
-	}
+	} else {
+		// File exists, prompt for overwrite confirmation
+		fmt.Printf("The file already exists: %s\n", filePath)
+		for {
+			var answer string
+			fmt.Printf("Do you want to overwrite it? (yes/no) [no]: ")
+			fmt.Scanln(&answer)
 
-	// File exists, prompt for overwrite confirmation
-	fmt.Printf("The file already exists: %s\n", filePath)
-	for {
-		var answer string
-		fmt.Printf("Do you want to overwrite it? (yes/no) [no]: ")
-		fmt.Scanln(&answer)
-
-		if answer == "yes" {
-			if err = saveToFile(filePath, data); err == nil {
-				fmt.Printf("File saved: %s\n\n", filePath)
+			if answer == "yes" {
+				if err = saveToFile(filePath, data); err == nil {
+					fmt.Printf("File saved: %s\n\n", filePath)
+				} else {
+					log.Fatalf("error: while saving the file: %s\n\n", err)
+				}
+				break
+			} else if answer == "no" || answer == "" {
+				fmt.Print("File will not be overwritten.\n\n")
+				break
 			} else {
-				log.Fatalf("error: while saving the file: %s\n\n", err)
+				fmt.Println("Invalid value. Please enter 'yes' or 'no'.")
 			}
-			break
-		} else if answer == "no" || answer == "" {
-			fmt.Print("File will not be overwritten.\n\n")
-			break
-		} else {
-			fmt.Println("Invalid value. Please enter 'yes' or 'no'.")
 		}
 	}
 }
