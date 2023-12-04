@@ -167,7 +167,7 @@ func saveToFile(filePath string, data string) error {
 	// and set file permissions to 0600 (read-write for owner only)
 	fd, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return fmt.Errorf("cannot create and set permission to file: %w", err)
+		return fmt.Errorf("Error: cannot create and set permission to file: %w", err)
 	}
 	defer fd.Close()
 
@@ -187,16 +187,19 @@ func saveToFile(filePath string, data string) error {
 
 func confirmSaveToFile(filePath string, data string) {
 	_, err := os.Stat(filePath)
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			// File doesn't exist, simply save the data
 			if err := saveToFile(filePath, data); err == nil {
 				fmt.Printf("File saved: %s\n\n", filePath)
 			} else {
-				printError(fmt.Sprintf("Error while saving the file: %s\n\n", err))
+				fmt.Printf("Error while saving the file: %s\n\n", err)
 			}
+			return
 		} else {
-			printError(fmt.Sprintf("Error during file check: %s\n\n", err))
+			fmt.Printf("Error during file check: %s\n\n", err)
+			return
 		}
 	}
 
