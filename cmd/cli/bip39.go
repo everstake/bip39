@@ -231,7 +231,7 @@ func outputMnemonic(mnemonic string, salt string, colorWord string, save string,
 
 	// If save is set to "yes", save the outFileMnemonic to a file
 	if save == "yes" {
-		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", savePath, hash, 1, "bip39"), outFileMnemonic)
+		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", savePath, hash, t, "bip39"), outFileMnemonic)
 	} else if save == "no" {
 		fmt.Print("File not saved. Only output.\n\n")
 	}
