@@ -31,6 +31,11 @@ type hashParams struct {
 	hashKeyLen  uint32
 }
 
+func printError(err interface{}) {
+	fmt.Fprintf(os.Stderr, "error: %v\n", err)
+	os.Exit(1)
+}
+
 func randomCharset(length int) string {
 	// Predefined character set containing letters (both cases) and digits
 	rCharset := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -80,7 +85,7 @@ func wordColor(word string, color string) string {
 	return word
 }
 
-func wordsToEntropyBits(wordCount int) (int, error) {
+func wordsToEntropyBits(wordCount int) int {
 	// Map specifying supported word counts and their equivalent entropy bits
 	wordToBits := map[int]int{
 		12: 128,
@@ -91,11 +96,11 @@ func wordsToEntropyBits(wordCount int) (int, error) {
 	bits, ok := wordToBits[wordCount]
 	if !ok {
 		// If the word count is not supported, return an error
-		return 0, fmt.Errorf("unsupported word count")
+		printError("unsupported word count")
 	}
 
 	// Return the corresponding entropy bits for the provided word count
-	return bits, nil
+	return bits
 }
 
 func argon2Encode(data string, salt string) (string, string) {
@@ -137,7 +142,7 @@ func constructHomeBip39Dir(dir string) string {
 	// Get information about the current user
 	currentUser, err := user.Current()
 	if err != nil {
-		fmt.Println("Error:", err)
+		printError(err)
 	}
 
 	// Create the full path by joining the home directory path with the new directory name
@@ -152,7 +157,7 @@ func checkAndCreateDir(dir string) {
 		// Create the directory
 		err = os.MkdirAll(dir, 0755) // 0755 sets permissions for the new directory
 		if err != nil {
-			fmt.Println("Error creating directory:", err)
+			printError("creating directory")
 		}
 	}
 }
@@ -188,12 +193,10 @@ func confirmSaveToFile(filePath string, data string) {
 			if err := saveToFile(filePath, data); err == nil {
 				fmt.Printf("File saved: %s\n\n", filePath)
 			} else {
-				fmt.Printf("Error while saving the file: %s\n\n", err)
+				printError(fmt.Sprintf("Error while saving the file: %s\n\n", err))
 			}
-			return
 		} else {
-			fmt.Printf("Error during file check: %s\n\n", err)
-			return
+			printError(fmt.Sprintf("Error during file check: %s\n\n", err))
 		}
 	}
 
@@ -208,7 +211,7 @@ func confirmSaveToFile(filePath string, data string) {
 			if err := saveToFile(filePath, data); err == nil {
 				fmt.Printf("File saved: %s\n\n", filePath)
 			} else {
-				fmt.Printf("Error while saving the file: %s\n\n", err)
+				printError(fmt.Sprintf("Error while saving the file: %s\n\n", err))
 			}
 			break
 		} else if answer == "no" || answer == "" {
@@ -276,16 +279,14 @@ func existingMnemonic(colorWord string, save string, savePath string) string {
 	fmt.Print("Enter Mnemonic: ")
 	mnemonic, err := promptAndValidateMnemonic()
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		printError(err)
 	}
 
 	// Prompt for and validate salt
 	fmt.Print("Enter Salt: ")
 	salt, err := promptAndValidateSalt()
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		printError(err)
 	}
 
 	// Generate and output mnemonic information
@@ -353,7 +354,7 @@ func main() {
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					words, _ := wordsToEntropyBits(cCtx.Int("words"))
+					words := wordsToEntropyBits(cCtx.Int("words"))
 					wordsColorFlag := strings.TrimSpace(cCtx.String("words-color"))
 					saveFlag := strings.TrimSpace(cCtx.String("save"))
 					saveDirFlag := path.Join(strings.TrimSpace(cCtx.String("save-dir")))
@@ -406,7 +407,6 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		printError(err)
 	}
 }
