@@ -11,7 +11,9 @@ import (
 	"golang.org/x/crypto/argon2"
 	"math/rand"
 	"os"
+	"os/user"
 	"path"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -131,6 +133,30 @@ func argon2Encode(data string, salt string) (string, string) {
 	return output, hex.EncodeToString(hash)
 }
 
+func constructHomeBip39Dir(dir string) string {
+	// Get information about the current user
+	currentUser, err := user.Current()
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+
+	// Create the full path by joining the home directory path with the new directory name
+	return filepath.Join(currentUser.HomeDir, dir)
+}
+
+func checkAndCreateDir(dir string) {
+	// Use os.Stat to get information about the directory
+	_, err := os.Stat(dir)
+
+	if os.IsNotExist(err) {
+		// Create the directory
+		err = os.MkdirAll(dir, 0755) // 0755 sets permissions for the new directory
+		if err != nil {
+			fmt.Println("Error creating directory:", err)
+		}
+	}
+}
+
 func saveToFile(filePath string, data string) error {
 	// Open the file at the specified filePath in write-only mode, create if it doesn't exist,
 	// and set file permissions to 0600 (read-write for owner only)
@@ -203,7 +229,7 @@ func outputMnemonic(mnemonic string, salt string, colorWord string, save string,
 
 	// If save is set to "yes", save the outFileMnemonic to a file
 	if save == "yes" {
-		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", path.Join(savePath), hash, t, "bip39"), outFileMnemonic)
+		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", savePath, hash, t, "bip39"), outFileMnemonic)
 	} else if save == "no" {
 		fmt.Print("File not saved. Only output.\n\n")
 	}
@@ -303,6 +329,8 @@ func main() {
 		"--save value\tSave to file (yes/no)\n\tFile name format: <Argon2 Hash>_<Timestamp UnixNano>.bip39\n" +
 		"--save-dir value\tSave file to directory"
 
+	defaultBip39Dir := constructHomeBip39Dir("bip39/mnemonics")
+
 	app := &cli.App{
 		Usage: "Generation, verification of mnemonics and obtaining their hash in Argon2 format",
 		Commands: []*cli.Command{
@@ -321,15 +349,19 @@ func main() {
 					},
 					&cli.StringFlag{
 						Name:  "save-dir",
-						Value: ".",
+						Value: defaultBip39Dir,
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
 					words, _ := wordsToEntropyBits(cCtx.Int("words"))
 					wordsColorFlag := strings.TrimSpace(cCtx.String("words-color"))
 					saveFlag := strings.TrimSpace(cCtx.String("save"))
-					saveDirFlag := strings.TrimSpace(cCtx.String("save-dir"))
+					saveDirFlag := path.Join(strings.TrimSpace(cCtx.String("save-dir")))
 					if saveFlag == "yes" || saveFlag == "no" {
+						if (saveFlag == "yes") && (saveDirFlag == defaultBip39Dir) {
+							// Checking and create default directory to save mnemonic files
+							checkAndCreateDir(defaultBip39Dir)
+						}
 						fmt.Print(generateMnemonic(words, wordsColorFlag, saveFlag, saveDirFlag))
 					} else {
 						return cli.Exit("Invalid value. Please enter 'yes' or 'no'.", 1)
@@ -351,14 +383,18 @@ func main() {
 					},
 					&cli.StringFlag{
 						Name:  "save-dir",
-						Value: ".",
+						Value: defaultBip39Dir,
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
 					wordsColorFlag := strings.TrimSpace(cCtx.String("words-color"))
 					saveFlag := strings.TrimSpace(cCtx.String("save"))
-					saveDirFlag := strings.TrimSpace(cCtx.String("save-dir"))
+					saveDirFlag := path.Join(strings.TrimSpace(cCtx.String("save-dir")))
 					if saveFlag == "yes" || saveFlag == "no" {
+						if (saveFlag == "yes") && (saveDirFlag == defaultBip39Dir) {
+							// Checking and create default directory to save mnemonic files
+							checkAndCreateDir(defaultBip39Dir)
+						}
 						fmt.Print(existingMnemonic(wordsColorFlag, saveFlag, saveDirFlag))
 					} else {
 						return cli.Exit("Invalid value. Please enter 'yes' or 'no'.", 1)
