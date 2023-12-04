@@ -3,6 +3,9 @@
 ## Build
     go build cmd/cli/bip39.go
 
+## Install
+    sudo install -t /usr/local/bin bip39
+
 ## BIP39 mnemonic generation
     bip39 generate
 
