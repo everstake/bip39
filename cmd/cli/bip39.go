@@ -192,30 +192,32 @@ func confirmSaveToFile(filePath string, data string) {
 			} else {
 				log.Fatalf("error: while saving the file: %s\n\n", err)
 			}
+			return
 		} else {
 			log.Fatalf("error: during file check: %s\n\n", err)
+			return
 		}
-	} else {
-		// File exists, prompt for overwrite confirmation
-		fmt.Printf("The file already exists: %s\n", filePath)
-		for {
-			var answer string
-			fmt.Printf("Do you want to overwrite it? (yes/no) [no]: ")
-			fmt.Scanln(&answer)
+	}
 
-			if answer == "yes" {
-				if err = saveToFile(filePath, data); err == nil {
-					fmt.Printf("File saved: %s\n\n", filePath)
-				} else {
-					log.Fatalf("error: while saving the file: %s\n\n", err)
-				}
-				break
-			} else if answer == "no" || answer == "" {
-				fmt.Print("File will not be overwritten.\n\n")
-				break
+	// File exists, prompt for overwrite confirmation
+	fmt.Printf("The file already exists: %s\n", filePath)
+	for {
+		var answer string
+		fmt.Printf("Do you want to overwrite it? (yes/no) [no]: ")
+		fmt.Scanln(&answer)
+
+		if answer == "yes" {
+			if err = saveToFile(filePath, data); err == nil {
+				fmt.Printf("File saved: %s\n\n", filePath)
 			} else {
-				fmt.Println("Invalid value. Please enter 'yes' or 'no'.")
+				log.Fatalf("error: while saving the file: %s\n\n", err)
 			}
+			break
+		} else if answer == "no" || answer == "" {
+			fmt.Print("File will not be overwritten.\n\n")
+			break
+		} else {
+			fmt.Println("Invalid value. Please enter 'yes' or 'no'.")
 		}
 	}
 }
@@ -229,7 +231,7 @@ func outputMnemonic(mnemonic string, salt string, colorWord string, save string,
 
 	// If save is set to "yes", save the outFileMnemonic to a file
 	if save == "yes" {
-		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", savePath, hash, t, "bip39"), outFileMnemonic)
+		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", savePath, hash, 1, "bip39"), outFileMnemonic)
 	} else if save == "no" {
 		fmt.Print("File not saved. Only output.\n\n")
 	}
