@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
@@ -10,18 +11,15 @@ import (
 	"go-bip39"
 	"golang.org/x/crypto/argon2"
 	"log"
-	"math/rand"
+	"math/big"
 	"os"
 	"os/user"
 	"path"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
-)
-
-var (
-	t = time.Now().UnixNano()
-	r = rand.New(rand.NewSource(t))
 )
 
 // Is a struct that defines parameters for Argon2 hashing algorithm.
@@ -39,9 +37,15 @@ func randomCharset(length int) string {
 	// Create a byte slice of the specified length
 	b := make([]byte, length)
 
-	// Fill each position in the byte slice with a randomly selected character from the 'rCharset'
+	// Length of the character set
+	charsetLen := big.NewInt(int64(len(rCharset)))
+
 	for i := range b {
-		b[i] = rCharset[r.Intn(len(rCharset))]
+		randomIndex, err := rand.Int(rand.Reader, charsetLen)
+		if err != nil {
+			log.Fatalf("error: reading random numbers: %s", err)
+		}
+		b[i] = rCharset[randomIndex.Int64()]
 	}
 
 	// Convert the byte slice to a string and return the generated random string
@@ -91,15 +95,22 @@ func wordsToEntropyBits(wordCount int) int {
 	// Retrieve the entropy bits for the given word count from the map
 	bits, ok := wordToBits[wordCount]
 	if !ok {
+		var allowedWords []string
+		for key := range wordToBits {
+			allowedWords = append(allowedWords, strconv.Itoa(key))
+		}
+		sort.Strings(allowedWords)
+
 		// If the word count is not supported, return an error
-		log.Fatal("error: unsupported word count")
+		fmt.Println("Unsupported word count.", fmt.Sprintf("Allowed words: %s", strings.Join(allowedWords, ", ")))
+		os.Exit(1)
 	}
 
 	// Return the corresponding entropy bits for the provided word count
 	return bits
 }
 
-func argon2Encode(data string, salt string) (string, string) {
+func argon2Encode(data string, salt string) (output string, hashHex string) {
 	// Define hashing parameters for Argon2
 	p := &hashParams{
 		hashTime:    1,
@@ -128,7 +139,7 @@ func argon2Encode(data string, salt string) (string, string) {
 	}
 
 	// Construct the output string containing Argon2 hash information
-	output := fmt.Sprintf("\n%s\n", strings.Join(argon2output, "\n"))
+	output = fmt.Sprintf("\n%s\n", strings.Join(argon2output, "\n"))
 
 	// Return the constructed output string and the hash in hexadecimal format
 	return output, hex.EncodeToString(hash)
@@ -138,7 +149,7 @@ func constructHomeBip39Dir(dir string) string {
 	// Get information about the current user
 	currentUser, err := user.Current()
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.Fatalf("error: %s", err)
 	}
 
 	// Create the full path by joining the home directory path with the new directory name
@@ -153,15 +164,19 @@ func checkAndCreateDir(dir string) {
 		// Create the directory
 		err = os.MkdirAll(dir, 0755) // 0755 sets permissions for the new directory
 		if err != nil {
-			log.Fatalf("error: %v", err)
+			log.Fatalf("error: %s", err)
 		}
+	}
+
+	if err != nil {
+		log.Fatalf("error: %s", err)
 	}
 }
 
 func saveToFile(filePath string, data string) error {
 	// Open the file at the specified filePath in write-only mode, create if it doesn't exist,
-	// and set file permissions to 0600 (read-write for owner only)
-	fd, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	// and set file permissions to 0400 (read-only for owner)
+	fd, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0400)
 	if err != nil {
 		return fmt.Errorf("cannot create and set permission to file: %w", err)
 	}
@@ -181,47 +196,6 @@ func saveToFile(filePath string, data string) error {
 	return nil
 }
 
-func confirmSaveToFile(filePath string, data string) {
-	_, err := os.Stat(filePath)
-
-	if err != nil {
-		if os.IsNotExist(err) {
-			// File doesn't exist, simply save the data
-			if err = saveToFile(filePath, data); err == nil {
-				fmt.Printf("File saved: %s\n\n", filePath)
-			} else {
-				log.Fatalf("error: while saving the file: %s\n\n", err)
-			}
-			return
-		} else {
-			log.Fatalf("error: during file check: %s\n\n", err)
-			return
-		}
-	}
-
-	// File exists, prompt for overwrite confirmation
-	fmt.Printf("The file already exists: %s\n", filePath)
-	for {
-		var answer string
-		fmt.Printf("Do you want to overwrite it? (yes/no) [no]: ")
-		fmt.Scanln(&answer)
-
-		if answer == "yes" {
-			if err = saveToFile(filePath, data); err == nil {
-				fmt.Printf("File saved: %s\n\n", filePath)
-			} else {
-				log.Fatalf("error: while saving the file: %s\n\n", err)
-			}
-			break
-		} else if answer == "no" || answer == "" {
-			fmt.Print("File will not be overwritten.\n\n")
-			break
-		} else {
-			fmt.Println("Invalid value. Please enter 'yes' or 'no'.")
-		}
-	}
-}
-
 func outputMnemonic(mnemonic string, salt string, colorWord string, save string, savePath string) string {
 	mnemonicList := strings.Split(mnemonic, " ")
 	encodedHash, hash := argon2Encode(mnemonic, salt)
@@ -231,7 +205,12 @@ func outputMnemonic(mnemonic string, salt string, colorWord string, save string,
 
 	// If save is set to "yes", save the outFileMnemonic to a file
 	if save == "yes" {
-		confirmSaveToFile(fmt.Sprintf("%s/%s_%d.%s", savePath, hash, t, "bip39"), outFileMnemonic)
+		filePath := fmt.Sprintf("%s/%s_%d.%s", savePath, hash, time.Now().UnixNano(), "bip39")
+		if err := saveToFile(filePath, outFileMnemonic); err == nil {
+			fmt.Printf("File saved: %s\n\n", filePath)
+		} else {
+			log.Fatalf("error: while saving the file: %s\n\n", err)
+		}
 	} else if save == "no" {
 		fmt.Print("File not saved. Only output.\n\n")
 	}
@@ -278,24 +257,24 @@ func existingMnemonic(colorWord string, save string, savePath string) string {
 	fmt.Print("Enter Mnemonic: ")
 	mnemonic, err := promptAndValidateMnemonic()
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.Fatalf("error: %s", err)
 	}
 
 	// Prompt for and validate salt
 	fmt.Print("Enter Salt: ")
 	salt, err := promptAndValidateSalt()
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.Fatalf("error: %s", err)
 	}
 
 	// Generate and output mnemonic information
 	return outputMnemonic(mnemonic, salt, colorWord, save, savePath)
 }
 
-func promptAndValidateMnemonic() (string, error) {
+func promptAndValidateMnemonic() (trimMnemonic string, err error) {
 	inputReader := bufio.NewReader(os.Stdin)
 	input, _ := inputReader.ReadString('\n')
-	trimMnemonic := strings.TrimSpace(input)
+	trimMnemonic = strings.TrimSpace(input)
 
 	if len(trimMnemonic) == 0 {
 		return "", fmt.Errorf("mnemonic can't be empty")
@@ -308,16 +287,53 @@ func promptAndValidateMnemonic() (string, error) {
 	return trimMnemonic, nil
 }
 
-func promptAndValidateSalt() (string, error) {
+func promptAndValidateSalt() (trimSalt string, err error) {
 	inputReader := bufio.NewReader(os.Stdin)
 	input, _ := inputReader.ReadString('\n')
-	trimSalt := strings.TrimSpace(input)
+	trimSalt = strings.TrimSpace(input)
 
 	if len(trimSalt) == 0 {
 		return "", fmt.Errorf("salt can't be empty")
 	}
 
 	return trimSalt, nil
+}
+
+func generateAction(cCtx *cli.Context) error {
+	words := wordsToEntropyBits(cCtx.Int("words"))
+	wordsColorFlag := strings.TrimSpace(cCtx.String("words-color"))
+	saveFlag := strings.TrimSpace(cCtx.String("save"))
+	saveDirFlag := path.Join(strings.TrimSpace(cCtx.String("save-dir")))
+
+	if saveFlag == "yes" || saveFlag == "no" {
+		if (saveFlag == "yes") && (saveDirFlag == saveDirFlag) {
+			// Checking and create default directory to save mnemonic files
+			checkAndCreateDir(saveDirFlag)
+		}
+		fmt.Print(generateMnemonic(words, wordsColorFlag, saveFlag, saveDirFlag))
+	} else {
+		return cli.Exit("Invalid value. Please enter 'yes' or 'no'.", 1)
+	}
+
+	return nil
+}
+
+func existingAction(cCtx *cli.Context) error {
+	wordsColorFlag := strings.TrimSpace(cCtx.String("words-color"))
+	saveFlag := strings.TrimSpace(cCtx.String("save"))
+	saveDirFlag := path.Join(strings.TrimSpace(cCtx.String("save-dir")))
+
+	if saveFlag == "yes" || saveFlag == "no" {
+		if (saveFlag == "yes") && (saveDirFlag == saveDirFlag) {
+			// Checking and create default directory to save mnemonic files
+			checkAndCreateDir(saveDirFlag)
+		}
+		fmt.Print(existingMnemonic(wordsColorFlag, saveFlag, saveDirFlag))
+	} else {
+		return cli.Exit("Invalid value. Please enter 'yes' or 'no'.", 1)
+	}
+
+	return nil
 }
 
 func main() {
@@ -329,7 +345,7 @@ func main() {
 		"--save value\tSave to file (yes/no)\n\tFile name format: <Argon2 Hash>_<Timestamp UnixNano>.bip39\n" +
 		"--save-dir value\tSave file to directory"
 
-	defaultBip39Dir := constructHomeBip39Dir("bip39/mnemonics")
+	defaultMnemonicsDir := constructHomeBip39Dir("bip39/mnemonics")
 
 	app := &cli.App{
 		Usage: "Generation, verification of mnemonics and obtaining their hash in Argon2 format",
@@ -349,22 +365,13 @@ func main() {
 					},
 					&cli.StringFlag{
 						Name:  "save-dir",
-						Value: defaultBip39Dir,
+						Value: defaultMnemonicsDir,
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					words := wordsToEntropyBits(cCtx.Int("words"))
-					wordsColorFlag := strings.TrimSpace(cCtx.String("words-color"))
-					saveFlag := strings.TrimSpace(cCtx.String("save"))
-					saveDirFlag := path.Join(strings.TrimSpace(cCtx.String("save-dir")))
-					if saveFlag == "yes" || saveFlag == "no" {
-						if (saveFlag == "yes") && (saveDirFlag == defaultBip39Dir) {
-							// Checking and create default directory to save mnemonic files
-							checkAndCreateDir(defaultBip39Dir)
-						}
-						fmt.Print(generateMnemonic(words, wordsColorFlag, saveFlag, saveDirFlag))
-					} else {
-						return cli.Exit("Invalid value. Please enter 'yes' or 'no'.", 1)
+					err := generateAction(cCtx)
+					if err != nil {
+						return err
 					}
 					return nil
 				},
@@ -383,21 +390,13 @@ func main() {
 					},
 					&cli.StringFlag{
 						Name:  "save-dir",
-						Value: defaultBip39Dir,
+						Value: defaultMnemonicsDir,
 					},
 				},
 				Action: func(cCtx *cli.Context) error {
-					wordsColorFlag := strings.TrimSpace(cCtx.String("words-color"))
-					saveFlag := strings.TrimSpace(cCtx.String("save"))
-					saveDirFlag := path.Join(strings.TrimSpace(cCtx.String("save-dir")))
-					if saveFlag == "yes" || saveFlag == "no" {
-						if (saveFlag == "yes") && (saveDirFlag == defaultBip39Dir) {
-							// Checking and create default directory to save mnemonic files
-							checkAndCreateDir(defaultBip39Dir)
-						}
-						fmt.Print(existingMnemonic(wordsColorFlag, saveFlag, saveDirFlag))
-					} else {
-						return cli.Exit("Invalid value. Please enter 'yes' or 'no'.", 1)
+					err := existingAction(cCtx)
+					if err != nil {
+						return err
 					}
 					return nil
 				},
@@ -406,6 +405,6 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatalf("error: %v", err)
+		log.Fatalf("error: %s", err)
 	}
 }
