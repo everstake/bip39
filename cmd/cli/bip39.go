@@ -213,7 +213,7 @@ func outputMnemonic(mnemonic string, salt string, colorWord string, save string,
 			log.Fatalf("error: while saving the file: %s\n\n", err)
 		}
 	} else if save == "no" {
-		fmt.Print("File not saved. Only output.\n\n")
+		fmt.Print("File not saved. Only console output.\n\n")
 	}
 
 	return outColorMnemonic + encodedHash
