@@ -177,7 +177,7 @@ func checkAndCreateDir(dir string) {
 func saveToFile(filePath string, data string) error {
 	// Open the file at the specified filePath in write-only mode, create if it doesn't exist,
 	// and set file permissions to 0400 (read-only for owner)
-	fd, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0400)
+	fd, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0400)
 	if err != nil {
 		return fmt.Errorf("cannot create and set permission to file: %w", err)
 	}
