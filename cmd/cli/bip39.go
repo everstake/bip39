@@ -7,9 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/urfave/cli/v2"
 	"go-bip39"
-	"golang.org/x/crypto/argon2"
 	"log"
 	"math/big"
 	"os"
@@ -20,6 +18,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/argon2"
 )
 
 // Is a struct that defines parameters for Argon2 hashing algorithm.
@@ -113,7 +114,7 @@ func wordsToEntropyBits(wordCount int) int {
 func argon2Encode(data string, salt string) (output string, hashHex string) {
 	// Define hashing parameters for Argon2
 	p := &hashParams{
-		hashTime:    1,
+		hashTime:    4,
 		hashMemory:  64 * 1024,
 		hashThreads: 4,
 		hashKeyLen:  32,
