@@ -64,7 +64,7 @@ func wordColor(word string, color string) string {
 		"magenta":       45,
 		"cyan":          46,
 		"white":         47,
-		"default":       49,
+		"default":       49, // currently specified color in your terminal
 		"light-gray":    100,
 		"light-red":     101,
 		"light-green":   102,
@@ -224,7 +224,7 @@ func outputColoredMnemonic(mnemonicList []string, colorWord string) string {
 
 	colors := strings.Split(colorWord, ",")
 
-	// Set default colors for the first and last words
+	// Set default colors for the first and last words and redefine them if flag is set properly
 	firstWordColor, lastWordColor := "default", "default"
 	if len(colors) == 2 {
 		firstWordColor = colors[0]
