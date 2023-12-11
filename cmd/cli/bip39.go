@@ -162,8 +162,8 @@ func checkAndCreateDir(dir string) {
 	_, err := os.Stat(dir)
 
 	if os.IsNotExist(err) {
-		// Create the directory
-		err = os.MkdirAll(dir, 0755) // 0755 sets permissions for the new directory
+		// Create the directory with 0755 permissions
+		err = os.MkdirAll(dir, 0755)
 		if err != nil {
 			log.Fatalf("error: %s", err)
 		}
