@@ -179,14 +179,14 @@ func saveToFile(filePath string, data string) error {
 	// and set file permissions to 0400 (read-only for owner)
 	fd, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE, 0400)
 	if err != nil {
-		return fmt.Errorf("cannot create and set permission to file: %w", err)
+		return fmt.Errorf("cannot create and set permission to file: %s", err)
 	}
 	defer fd.Close()
 
 	// Write the data to the file
 	n, err := fd.Write([]byte(data))
 	if err != nil {
-		return fmt.Errorf("cannot write to file: %w", err)
+		return fmt.Errorf("cannot write to file: %s", err)
 	}
 
 	// Check if the number of bytes written doesn't match the length of the data
