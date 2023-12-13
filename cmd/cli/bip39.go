@@ -354,19 +354,21 @@ func main() {
 	defaultFlagSaveDir, _ := defaultHomeDirConstruct("bip39/mnemonics") // This wil save to: ~/bip39/mnemonics
 
 	mainUsage := func(f *defaultFlags) string {
-		usage := "--words value\tWord count (default: " + strconv.Itoa(f.words) + ")\n" +
-			"--color value\tFirst and last word color highlighting (default: " + f.wordsColor + ")\n" +
+		usage := "--color value\tFirst and last word color highlighting (default: " + f.wordsColor + ")\n" +
 			"\tAllowed colors: black, red, green, yellow, blue, magenta, cyan, white\n" +
 			"--save value\tSave to file [yes/no] (default: " + f.save + ")\n" +
 			"\tFile name format: <Argon2idHash>_<TimestampUnixNano>.bip39\n" +
 			"--dir value\tSave file to directory (default: " + f.saveDir + ")\n"
 
+		if f.words != 0 {
+			return "--words value\tWord count (default: " + strconv.Itoa(f.words) + ")\n" + usage
+		}
 		return usage
 	}
 
 	generateUsage := mainUsage(&defaultFlags{words: defaultFlagWords, wordsColor: defaultFlagWordsColor, save: "yes", saveDir: defaultFlagSaveDir})
 
-	existingUsage := mainUsage(&defaultFlags{words: defaultFlagWords, wordsColor: defaultFlagWordsColor, save: "no", saveDir: defaultFlagSaveDir})
+	existingUsage := mainUsage(&defaultFlags{wordsColor: defaultFlagWordsColor, save: "no", saveDir: defaultFlagSaveDir})
 
 	app := &cli.App{
 		Usage: "Generation, verification of mnemonics in BIP39 standard and obtaining their hash in Argon2id format",
