@@ -328,6 +328,7 @@ func existingMnemonicAction(cCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	fmt.Print("\n")
 
 	if !charsetValidate(salt) {
 		return fmt.Errorf("%s", "the salt includes characters that are not allowed")
