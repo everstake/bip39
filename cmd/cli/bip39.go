@@ -323,7 +323,7 @@ func existingMnemonicAction(cCtx *cli.Context) error {
 	}
 
 	// Prompt for and validate salt
-	fmt.Print("Enter Salt: ")
+	fmt.Print("Enter Argon2 Salt: ")
 	salt, err := inputData()
 	if err != nil {
 		return err
@@ -354,10 +354,10 @@ func main() {
 
 	mainUsage := func(f *defaultFlags) string {
 		usage := "--words value\tWord count (default: " + strconv.Itoa(f.words) + ")\n" +
-			"--color value\tFirst and last word color highlighting\n" +
-			"\tAllowed colors: black, red, green, yellow, blue, magenta, cyan, white (default: " + f.wordsColor + ")\n" +
-			"--save value\tSave to file (yes/no)\n" +
-			"\tFile name format: <Argon2idHash>_<TimestampUnixNano>.bip39 (default: " + f.save + ")\n" +
+			"--color value\tFirst and last word color highlighting (default: \" + f.wordsColor + \")\n" +
+			"\tAllowed colors: black, red, green, yellow, blue, magenta, cyan, white\n" +
+			"--save value\tSave to file [yes/no] (default: \" + f.save + \")\n" +
+			"\tFile name format: <Argon2idHash>_<TimestampUnixNano>.bip39\n" +
 			"--dir value\tSave file to directory (default: " + f.saveDir + ")\n"
 
 		return usage
