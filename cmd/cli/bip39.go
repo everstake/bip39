@@ -68,23 +68,23 @@ func generateRandomCharset(length int) (randomCharset string, err error) {
 func wordHighlighting(word string, color string) string {
 	// Map containing color names and their corresponding ANSI color codes
 	ansiColors := map[string]int{
-		"black":         40,
-		"red":           41,
-		"green":         42,
-		"yellow":        43,
-		"blue":          44,
-		"magenta":       45,
-		"cyan":          46,
-		"white":         47,
-		"default":       49, // currently specified color in your terminal
-		"light-gray":    100,
-		"light-red":     101,
-		"light-green":   102,
-		"light-yellow":  103,
-		"light-blue":    104,
-		"light-magenta": 105,
-		"light-cyan":    106,
-		"light-white":   107,
+		"black":   40,
+		"red":     41,
+		"green":   42,
+		"yellow":  43,
+		"blue":    44,
+		"magenta": 45,
+		"cyan":    46,
+		"white":   47,
+		//"default":       49, // currently specified color in your terminal
+		//"light-gray":    100,
+		//"light-red":     101,
+		//"light-green":   102,
+		//"light-yellow":  103,
+		//"light-blue":    104,
+		//"light-magenta": 105,
+		//"light-cyan":    106,
+		//"light-white":   107,
 	}
 
 	// Check if the provided color string exists in the 'colors' map
@@ -355,8 +355,7 @@ func main() {
 	mainUsage := func(f *defaultFlags) string {
 		usage := "--words value\tWord count (default: " + strconv.Itoa(f.words) + ")\n" +
 			"--color value\tFirst and last word color highlighting\n" +
-			"\tAllowed colors: default, black, red, green, yellow, blue, magenta, cyan, white,\n" +
-			"\tlight-gray, light-red, light-green, light-yellow, light-blue, light-magenta, light-cyan, light-white (default: " + f.wordsColor + ")\n" +
+			"\tAllowed colors: black, red, green, yellow, blue, magenta, cyan, white (default: " + f.wordsColor + ")\n" +
 			"--save value\tSave to file (yes/no)\n" +
 			"\tFile name format: <Argon2idHash>_<TimestampUnixNano>.bip39 (default: " + f.save + ")\n" +
 			"--dir value\tSave file to directory (default: " + f.saveDir + ")\n"
