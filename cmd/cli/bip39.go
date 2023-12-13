@@ -296,9 +296,9 @@ func generateMnemonicAction(cCtx *cli.Context) error {
 		return err
 	}
 
-	wordsColor := strings.TrimSpace(cCtx.String("words-color"))
+	wordsColor := strings.TrimSpace(cCtx.String("color"))
 	save := strings.TrimSpace(cCtx.String("save"))
-	saveDir := strings.TrimSpace(cCtx.String("save-dir"))
+	saveDir := strings.TrimSpace(cCtx.String("dir"))
 
 	construct, err := mnemonicConstructAndSave(mnemonic, salt, wordsColor, save, saveDir)
 	if err != nil {
@@ -333,9 +333,9 @@ func existingMnemonicAction(cCtx *cli.Context) error {
 		return fmt.Errorf("%s", "the salt includes characters that are not allowed")
 	}
 
-	wordsColor := strings.TrimSpace(cCtx.String("words-color"))
+	wordsColor := strings.TrimSpace(cCtx.String("color"))
 	save := strings.TrimSpace(cCtx.String("save"))
-	saveDir := strings.TrimSpace(cCtx.String("save-dir"))
+	saveDir := strings.TrimSpace(cCtx.String("dir"))
 
 	construct, err := mnemonicConstructAndSave(mnemonic, salt, wordsColor, save, saveDir)
 	if err == nil {
@@ -354,12 +354,12 @@ func main() {
 
 	mainUsage := func(f *defaultFlags) string {
 		usage := "--words value\tWord count (default: " + strconv.Itoa(f.words) + ")\n" +
-			"--words-color value\tFirst and last word color highlighting\n" +
+			"--color value\tFirst and last word color highlighting\n" +
 			"\tAllowed colors: default, black, red, green, yellow, blue, magenta, cyan, white,\n" +
 			"\tlight-gray, light-red, light-green, light-yellow, light-blue, light-magenta, light-cyan, light-white (default: " + f.wordsColor + ")\n" +
 			"--save value\tSave to file (yes/no)\n" +
 			"\tFile name format: <Argon2idHash>_<TimestampUnixNano>.bip39 (default: " + f.save + ")\n" +
-			"--save-dir value\tSave file to directory (default: " + f.saveDir + ")\n"
+			"--dir value\tSave file to directory (default: " + f.saveDir + ")\n"
 
 		return usage
 	}
@@ -377,7 +377,7 @@ func main() {
 				Flags: []cli.Flag{
 					&cli.IntFlag{Name: "words", Value: defaultFlagWords},
 					&cli.StringFlag{
-						Name:  "words-color",
+						Name:  "color",
 						Value: defaultFlagWordsColor,
 					},
 					&cli.StringFlag{
@@ -385,7 +385,7 @@ func main() {
 						Value: "yes",
 					},
 					&cli.StringFlag{
-						Name:  "save-dir",
+						Name:  "dir",
 						Value: defaultFlagSaveDir,
 					},
 				},
@@ -402,7 +402,7 @@ func main() {
 				Usage: fmt.Sprintf("Check existing BIP39 mnemonic\n%s", existingUsage),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name:  "words-color",
+						Name:  "color",
 						Value: defaultFlagWordsColor,
 					},
 					&cli.StringFlag{
@@ -410,7 +410,7 @@ func main() {
 						Value: "no",
 					},
 					&cli.StringFlag{
-						Name:  "save-dir",
+						Name:  "dir",
 						Value: defaultFlagSaveDir,
 					},
 				},
