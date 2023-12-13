@@ -23,7 +23,7 @@ import (
 
 const Charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-// Argon2EncodeParams is a struct that defines parameters for Argon2 hashing algorithm.
+// Argon2EncodeParams is a struct that defines parameters for Argon2Id hashing algorithm.
 type argon2EncodeParams struct {
 	hashTime    uint32
 	hashMemory  uint32
@@ -31,7 +31,7 @@ type argon2EncodeParams struct {
 	hashKeyLen  uint32
 }
 
-type defaultMainUsage struct {
+type defaultFlags struct {
 	words      int
 	wordsColor string
 	save       string
@@ -124,7 +124,7 @@ func wordsToEntropyBits(wordCount int) (entropyBits int, err error) {
 }
 
 func argon2Encode(data string, salt string) (hashInfo string, hashHex string) {
-	// Define hashing parameters for Argon2
+	// Define hashing parameters for Argon2Id
 	p := &argon2EncodeParams{
 		hashTime:    4,
 		hashMemory:  64 * 1024,
@@ -132,13 +132,13 @@ func argon2Encode(data string, salt string) (hashInfo string, hashHex string) {
 		hashKeyLen:  32,
 	}
 
-	// Generate the Argon2 hash using IDKey function
+	// Generate the Argon2Id hash using IDKey function
 	hash := argon2.IDKey([]byte(data), []byte(salt), p.hashTime, p.hashMemory, p.hashThreads, p.hashKeyLen)
 
 	// Encode the salt and hash into base64 format
 	b64Salt := base64.RawStdEncoding.EncodeToString([]byte(salt))
 
-	// Construct information about the Argon2 hash and its parameters
+	// Construct information about the Argon2Id hash and its parameters
 	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
 	argon2output := []string{
 		"Argon2 Hash\n---",
@@ -151,7 +151,7 @@ func argon2Encode(data string, salt string) (hashInfo string, hashHex string) {
 		fmt.Sprintf("Encoded:\t$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", argon2.Version, p.hashMemory, p.hashTime, p.hashThreads, b64Salt, b64Hash),
 	}
 
-	// Construct the output string containing Argon2 hash information
+	// Construct the output string containing Argon2Id hash information
 	hashInfo = strings.Join(argon2output, "\n")
 
 	// Return the constructed output string and the hash in hexadecimal format
@@ -250,12 +250,12 @@ func mnemonicHighlighting(mnemonicList []string, WordsColor string) string {
 	return outColorBuffer.String()
 }
 
-func mnemonicConstruct(mnemonic string, salt string, wordsColor string, save string, saveDir string) (outputMnemonic string, err error) {
+func mnemonicConstructAndSave(mnemonic string, salt string, wordsColor string, save string, saveDir string) (outputMnemonic string, err error) {
 	hashInfo, hashHex := argon2Encode(mnemonic, salt)
 	mnemonicList := strings.Split(mnemonic, " ")
 	outMnemonicHighlighting := mnemonicHighlighting(mnemonicList, wordsColor)
 
-	// If save is set to "yes", save the outMnemonic + hashInfo to a file
+	// If save is set to "yes", also save the mnemonic + hashInfo to a file
 	if save == "yes" {
 		outputMnemonic = fmt.Sprintf("Mnemonic:\n%s\n\n%s", mnemonic, hashInfo)
 		filePath := fmt.Sprintf("%s_%d.%s", hashHex, time.Now().UnixNano(), "bip39")
@@ -270,7 +270,9 @@ func mnemonicConstruct(mnemonic string, salt string, wordsColor string, save str
 		return "", fmt.Errorf("%s", "invalid value. Please enter 'yes' or 'no'")
 	}
 
-	return fmt.Sprintf("Mnemonic:\n%s\n\n%s", outMnemonicHighlighting, hashInfo), nil
+	outputMnemonic = fmt.Sprintf("Mnemonic:\n%s\n\n%s", outMnemonicHighlighting, hashInfo)
+
+	return outputMnemonic, nil
 }
 
 func generateMnemonicAction(cCtx *cli.Context) error {
@@ -298,7 +300,7 @@ func generateMnemonicAction(cCtx *cli.Context) error {
 	save := strings.TrimSpace(cCtx.String("save"))
 	saveDir := strings.TrimSpace(cCtx.String("save-dir"))
 
-	construct, err := mnemonicConstruct(mnemonic, salt, wordsColor, save, saveDir)
+	construct, err := mnemonicConstructAndSave(mnemonic, salt, wordsColor, save, saveDir)
 	if err != nil {
 		return err
 	} else {
@@ -328,14 +330,14 @@ func existingMnemonicAction(cCtx *cli.Context) error {
 	}
 
 	if !charsetValidate(salt) {
-		return fmt.Errorf("%s", "the salt consists of characters that are not allowed")
+		return fmt.Errorf("%s", "the salt includes characters that are not allowed")
 	}
 
 	wordsColor := strings.TrimSpace(cCtx.String("words-color"))
 	save := strings.TrimSpace(cCtx.String("save"))
 	saveDir := strings.TrimSpace(cCtx.String("save-dir"))
 
-	construct, err := mnemonicConstruct(mnemonic, salt, wordsColor, save, saveDir)
+	construct, err := mnemonicConstructAndSave(mnemonic, salt, wordsColor, save, saveDir)
 	if err == nil {
 		fmt.Println(construct)
 	} else {
@@ -348,30 +350,30 @@ func existingMnemonicAction(cCtx *cli.Context) error {
 func main() {
 	defaultFlagWords := 24
 	defaultFlagWordsColor := "green,blue"
-	defaultFlagSaveDir, _ := defaultHomeDirConstruct("bip39/mnemonics")
+	defaultFlagSaveDir, _ := defaultHomeDirConstruct("bip39/mnemonics") // This wil save to: ~/bip39/mnemonics
 
-	mainUsage := func(d *defaultMainUsage) string {
-		usage := "--words value\tWord count (default: " + strconv.Itoa(d.words) + ")\n" +
+	mainUsage := func(f *defaultFlags) string {
+		usage := "--words value\tWord count (default: " + strconv.Itoa(f.words) + ")\n" +
 			"--words-color value\tFirst and last word color highlighting\n" +
 			"\tAllowed colors: default, black, red, green, yellow, blue, magenta, cyan, white,\n" +
-			"\tlight-gray, light-red, light-green, light-yellow, light-blue, light-magenta, light-cyan, light-white (default: " + d.wordsColor + ")\n" +
+			"\tlight-gray, light-red, light-green, light-yellow, light-blue, light-magenta, light-cyan, light-white (default: " + f.wordsColor + ")\n" +
 			"--save value\tSave to file (yes/no)\n" +
-			"\tFile name format: <Argon2Hash>_<TimestampUnixNano>.bip39 (default: " + d.save + ")\n" +
-			"--save-dir value\tSave file to directory (default: " + d.saveDir + ")\n"
+			"\tFile name format: <Argon2idHash>_<TimestampUnixNano>.bip39 (default: " + f.save + ")\n" +
+			"--save-dir value\tSave file to directory (default: " + f.saveDir + ")\n"
 
 		return usage
 	}
 
-	generateMainUsage := mainUsage(&defaultMainUsage{words: defaultFlagWords, wordsColor: defaultFlagWordsColor, save: "yes", saveDir: defaultFlagSaveDir})
+	generateUsage := mainUsage(&defaultFlags{words: defaultFlagWords, wordsColor: defaultFlagWordsColor, save: "yes", saveDir: defaultFlagSaveDir})
 
-	existingMainUsage := mainUsage(&defaultMainUsage{words: defaultFlagWords, wordsColor: defaultFlagWordsColor, save: "no", saveDir: defaultFlagSaveDir})
+	existingUsage := mainUsage(&defaultFlags{words: defaultFlagWords, wordsColor: defaultFlagWordsColor, save: "no", saveDir: defaultFlagSaveDir})
 
 	app := &cli.App{
-		Usage: "Generation, verification of mnemonics and obtaining their hash in Argon2 format",
+		Usage: "Generation, verification of mnemonics in BIP39 standard and obtaining their hash in Argon2id format",
 		Commands: []*cli.Command{
 			{
 				Name:  "generate",
-				Usage: fmt.Sprintf("BIP39 mnemonic generation\n%s", generateMainUsage),
+				Usage: fmt.Sprintf("BIP39 mnemonic generation\n%s", generateUsage),
 				Flags: []cli.Flag{
 					&cli.IntFlag{Name: "words", Value: defaultFlagWords},
 					&cli.StringFlag{
@@ -397,7 +399,7 @@ func main() {
 			},
 			{
 				Name:  "existing",
-				Usage: fmt.Sprintf("Check existing BIP39 mnemonic\n%s", existingMainUsage),
+				Usage: fmt.Sprintf("Check existing BIP39 mnemonic\n%s", existingUsage),
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "words-color",
