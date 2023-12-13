@@ -1,4 +1,4 @@
-# Generation, verification of mnemonics and obtaining their hash in Argon2 format
+# Generation, verification of mnemonics in BIP39 standard and obtaining their hash in Argon2id format
 
 ## Build
     go build cmd/cli/bip39.go
@@ -9,23 +9,22 @@
 ## BIP39 mnemonic generation
     bip39 generate
 
-    --words value         Word count
-    --words-color value   First and last word color highlighting
-                          Allowed colors: default, black, red, green, yellow, blue, magenta, cyan, white,
-                          light-gray, light-red, light-green, light-yellow, light-blue, light-magenta, light-cyan, light-white
-    --save value          Save to file (yes/no)
-                          File name format: <Argon2 Hash>_<Timestamp UnixNano>.bip39
-    --save-dir value      Save file to directory
+    --words value   Word count (default: 24)
+    --color value   First and last word color highlighting (default: green,blue)
+                    Allowed colors: black, red, green, yellow, blue, magenta, cyan, white
+    --save value    Save to file [yes/no] (default: yes)
+                    File name format: <Argon2idHash>_<TimestampUnixNano>.bip39
+    --dir value     Save file to directory (default: ~/bip39/mnemonics)
 
 
 ## Check existing BIP39 mnemonic
     bip39 existing
 
-    --words-color value   First and last word color highlighting
-                          Allowed colors: default, black, red, green, yellow, blue, magenta, cyan, white,
-                          light-gray, light-red, light-green, light-yellow, light-blue, light-magenta, light-cyan, light-white
-    --save value          Save to file (yes/no)
-                          File name format: <Argon2 Hash>_<Timestamp UnixNano>.bip39
-    --save-dir value      Save file to directory
+    --color value   First and last word color highlighting (default: green,blue)
+                    Allowed colors: black, red, green, yellow, blue, magenta, cyan, white
+    --save value    Save to file [yes/no] (default: no)
+                    File name format: <Argon2idHash>_<TimestampUnixNano>.bip39
+    --dir value     Save file to directory (default: ~/bip39/mnemonics)
+
 
 ### Fork: https://github.com/tyler-smith/go-bip39
