@@ -354,9 +354,9 @@ func main() {
 
 	mainUsage := func(f *defaultFlags) string {
 		usage := "--words value\tWord count (default: " + strconv.Itoa(f.words) + ")\n" +
-			"--color value\tFirst and last word color highlighting (default: \" + f.wordsColor + \")\n" +
+			"--color value\tFirst and last word color highlighting (default: " + f.wordsColor + ")\n" +
 			"\tAllowed colors: black, red, green, yellow, blue, magenta, cyan, white\n" +
-			"--save value\tSave to file [yes/no] (default: \" + f.save + \")\n" +
+			"--save value\tSave to file [yes/no] (default: " + f.save + ")\n" +
 			"\tFile name format: <Argon2idHash>_<TimestampUnixNano>.bip39\n" +
 			"--dir value\tSave file to directory (default: " + f.saveDir + ")\n"
 
