@@ -1,0 +1,10 @@
+builds:
+  - main: ./cmd/cli/bip39.go
+    binary: bip39
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
