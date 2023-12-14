@@ -7,9 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/urfave/cli/v2"
 	"go-bip39"
-	"golang.org/x/crypto/argon2"
 	"math/big"
 	"os"
 	"os/user"
@@ -19,6 +17,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/argon2"
 )
 
 const Charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -58,6 +59,7 @@ func generateRandomCharset(length int) (randomCharset string, err error) {
 		if err != nil {
 			return "", fmt.Errorf("reading random numbers: %s", err)
 		}
+
 		randomBytes[i] = Charset[randomIndex.Int64()]
 	}
 
@@ -113,6 +115,7 @@ func wordsToEntropyBits(wordCount int) (entropyBits int, err error) {
 		for key := range wordToBits {
 			allowedWords = append(allowedWords, strconv.Itoa(key))
 		}
+
 		sort.Strings(allowedWords)
 
 		// If the word count is not supported, return an error
@@ -221,6 +224,7 @@ func inputData() (trimData string, err error) {
 	inputReader := bufio.NewReader(os.Stdin)
 	input, err := inputReader.ReadString('\n')
 	trimData = strings.TrimSpace(input)
+
 	if err != nil {
 		return "", err
 	}
@@ -232,16 +236,17 @@ func inputData() (trimData string, err error) {
 	return trimData, nil
 }
 
-func mnemonicHighlighting(mnemonicList []string, WordsColor string) string {
+func mnemonicHighlighting(mnemonicList []string, wordsColor string) string {
 	var outColorBuffer bytes.Buffer
 
-	colors := strings.Split(WordsColor, ",")
+	colors := strings.Split(wordsColor, ",")
 
 	// Calculate the last index of the mnemonicList
 	mnemonicLastIndex := len(mnemonicList) - 1
 
 	// Construct the formatted string with colored first and last words
 	outColorBuffer.WriteString(fmt.Sprintf("%s ", wordHighlighting(mnemonicList[0], colors[0])))
+
 	for i := 1; i < mnemonicLastIndex; i++ {
 		outColorBuffer.WriteString(fmt.Sprintf("%s ", mnemonicList[i]))
 	}
@@ -259,6 +264,7 @@ func mnemonicConstructAndSave(mnemonic string, salt string, wordsColor string, s
 	if save == "yes" {
 		outputMnemonic = fmt.Sprintf("Mnemonic:\n%s\n\n%s", mnemonic, hashInfo)
 		filePath := fmt.Sprintf("%s_%d.%s", hashHex, time.Now().UnixNano(), "bip39")
+
 		if err = saveToFile(saveDir, filePath, outputMnemonic); err == nil {
 			fmt.Printf("File saved: %s\n\n", path.Join(saveDir, filePath))
 		} else {
@@ -266,8 +272,6 @@ func mnemonicConstructAndSave(mnemonic string, salt string, wordsColor string, s
 		}
 	} else if save == "no" {
 		fmt.Print("Only console output, file NOT saved.\n\n")
-	} else {
-		return "", fmt.Errorf("%s", "invalid value. Please enter 'yes' or 'no'")
 	}
 
 	outputMnemonic = fmt.Sprintf("Mnemonic:\n%s\n\n%s", outMnemonicHighlighting, hashInfo)
@@ -303,9 +307,9 @@ func generateMnemonicAction(cCtx *cli.Context) error {
 	construct, err := mnemonicConstructAndSave(mnemonic, salt, wordsColor, save, saveDir)
 	if err != nil {
 		return err
-	} else {
-		fmt.Println(construct)
 	}
+
+	fmt.Println(construct)
 
 	return nil
 }
@@ -313,6 +317,7 @@ func generateMnemonicAction(cCtx *cli.Context) error {
 func existingMnemonicAction(cCtx *cli.Context) error {
 	// Prompt for and validate mnemonic
 	fmt.Print("Enter Mnemonic: ")
+
 	mnemonic, err := inputData()
 	if err != nil {
 		return err
@@ -324,10 +329,12 @@ func existingMnemonicAction(cCtx *cli.Context) error {
 
 	// Prompt for and validate salt
 	fmt.Print("Enter Argon2 Salt: ")
+
 	salt, err := inputData()
 	if err != nil {
 		return err
 	}
+
 	fmt.Print("\n")
 
 	if !charsetValidate(salt) {
@@ -363,12 +370,21 @@ func main() {
 		if f.words != 0 {
 			return "--words value\tWord count (default: " + strconv.Itoa(f.words) + ")\n" + usage
 		}
+
 		return usage
 	}
 
 	generateUsage := mainUsage(&defaultFlags{words: defaultFlagWords, wordsColor: defaultFlagWordsColor, save: "yes", saveDir: defaultFlagSaveDir})
 
 	existingUsage := mainUsage(&defaultFlags{wordsColor: defaultFlagWordsColor, save: "no", saveDir: defaultFlagSaveDir})
+
+	saveFlagValidate := func(cCtx *cli.Context, value string) error {
+		if value != "yes" && value != "no" {
+			return fmt.Errorf("%s", "invalid value. Please enter 'yes' or 'no'")
+		}
+
+		return nil
+	}
 
 	app := &cli.App{
 		Usage: "Generation, verification of mnemonics in BIP39 standard and obtaining their hash in Argon2id format",
@@ -383,8 +399,9 @@ func main() {
 						Value: defaultFlagWordsColor,
 					},
 					&cli.StringFlag{
-						Name:  "save",
-						Value: "yes",
+						Name:   "save",
+						Value:  "yes",
+						Action: saveFlagValidate,
 					},
 					&cli.StringFlag{
 						Name:  "dir",
@@ -408,8 +425,9 @@ func main() {
 						Value: defaultFlagWordsColor,
 					},
 					&cli.StringFlag{
-						Name:  "save",
-						Value: "no",
+						Name:   "save",
+						Value:  "no",
+						Action: saveFlagValidate,
 					},
 					&cli.StringFlag{
 						Name:  "dir",
