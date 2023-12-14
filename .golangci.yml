@@ -10,13 +10,37 @@ issues:
       text: "Function 'testVectors' is too long"
       linters:
         - funlen
-    - path: (languages|bip39_test|example_test)\.go
+    - path: (cmd/cli/bip39|bip39_test|example_test)\.go
       linters:
         - lll
     - path: bip39\.go
       text: "ST1005: error strings should not be capitalized"
       linters:
         - stylecheck
+    - path: (bip39|bip39_test)\.go
+      text: "File is not `goimports`-ed"
+      linters:
+        - goimports
+    - path: (bip39|bip39_test)\.go
+      text: "is not allowed from list 'Main'"
+      linters:
+        - depguard
+    - path: (cmd/cli/bip39|bip39|bip39_test|example_test)\.go
+      text: "put a space between `//` and comment text"
+      linters:
+        - gocritic
+    - path: cmd/cli/bip39\.go
+      text: "lines are duplicate of"
+      linters:
+        - dupl
+    - path: cmd/cli/bip39\.go
+      text: "Function 'main' is too long"
+      linters:
+        - funlen
+    - path: cmd/cli/bip39\.go
+      text: "make it a constant"
+      linters:
+        - goconst
 
 linters-settings:
   dupl:
@@ -33,7 +57,6 @@ linters-settings:
   nakedret:
     max-func-lines: 0
   unparam:
-    algo: cha
     check-exported: false
 
 linters:
@@ -59,7 +82,6 @@ linters:
     - govet
     - ineffassign
     - lll
-    - megacheck
     - maligned
     - misspell
     - nakedret
