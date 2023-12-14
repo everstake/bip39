@@ -6,8 +6,9 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"bip39/wordlists"
+
 	"github.com/tyler-smith/assert"
-	"go-bip39/wordlists"
 )
 
 type vector struct {
@@ -117,7 +118,7 @@ func TestNewEntropy(t *testing.T) {
 func TestMnemonicToByteArrayForDifferentArrayLengths(t *testing.T) {
 	max := 1000
 	for i := 0; i < max; i++ {
-		//16, 20, 24, 28, 32
+		// 16, 20, 24, 28, 32
 		length := 16 + (i%5)*4
 		seed := make([]byte, length)
 

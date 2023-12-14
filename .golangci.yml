@@ -2,7 +2,7 @@ run:
   max-same-issues: 0
   max-issues-per-linter: 0
   skip-dirs:
-    - wordlists
+   - wordlists
 
 issues:
   exclude-rules:
@@ -17,18 +17,10 @@ issues:
       text: "ST1005: error strings should not be capitalized"
       linters:
         - stylecheck
-    - path: (bip39|bip39_test)\.go
-      text: "File is not `goimports`-ed"
-      linters:
-        - goimports
-    - path: (bip39|bip39_test)\.go
+    - path: (cmd/cli/bop39|bip39|bip39_test|example_test)\.go
       text: "is not allowed from list 'Main'"
       linters:
         - depguard
-    - path: (cmd/cli/bip39|bip39|bip39_test|example_test)\.go
-      text: "put a space between `//` and comment text"
-      linters:
-        - gocritic
     - path: cmd/cli/bip39\.go
       text: "lines are duplicate of"
       linters:

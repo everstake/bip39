@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bip39"
 	"bufio"
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"go-bip39"
 	"math/big"
 	"os"
 	"os/user"
@@ -78,15 +78,15 @@ func wordHighlighting(word string, color string) string {
 		"magenta": 45,
 		"cyan":    46,
 		"white":   47,
-		//"default":       49, // currently specified color in your terminal
-		//"light-gray":    100,
-		//"light-red":     101,
-		//"light-green":   102,
-		//"light-yellow":  103,
-		//"light-blue":    104,
-		//"light-magenta": 105,
-		//"light-cyan":    106,
-		//"light-white":   107,
+		// "default":       49, // currently specified color in your terminal
+		// "light-gray":    100,
+		// "light-red":     101,
+		// "light-green":   102,
+		// "light-yellow":  103,
+		// "light-blue":    104,
+		// "light-magenta": 105,
+		// "light-cyan":    106,
+		// "light-white":   107,
 	}
 
 	// Check if the provided color string exists in the 'colors' map

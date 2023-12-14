@@ -2,7 +2,7 @@
 
 # Generation, verification of mnemonics in BIP39 standard and obtaining their hash in Argon2id format
 
-#### Fork: https://github.com/tyler-smith/go-bip39
+### Fork: https://github.com/tyler-smith/go-bip39
 
 ## Build
     go build cmd/cli/bip39.go
