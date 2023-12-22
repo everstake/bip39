@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -179,8 +180,8 @@ func checkAndCreateDir(dir string) error {
 	_, err := os.Stat(dir)
 
 	if os.IsNotExist(err) {
-		// Create the directory with 0755 permissions
-		if err = os.MkdirAll(dir, 0755); err != nil {
+		// Create the directory with 0750 permissions
+		if err = os.MkdirAll(dir, 0750); err != nil {
 			return err
 		}
 	}
@@ -200,7 +201,7 @@ func saveToFile(fileDir string, fileName string, data string) error {
 
 	// Open the file at the specified filePath in write-only mode, create if it doesn't exist,
 	// and set file permissions to 0400 (read-only for owner)
-	fd, err := os.OpenFile(path.Join(fileDir, fileName), os.O_WRONLY|os.O_CREATE, 0400)
+	fd, err := os.OpenFile(filepath.Clean(path.Join(fileDir, fileName)), os.O_WRONLY|os.O_CREATE, 0400)
 	if err != nil {
 		return fmt.Errorf("cannot create and set permission to file: %s", err)
 	}
