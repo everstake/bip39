@@ -25,6 +25,12 @@ import (
 
 const Charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
+var (
+	version   string
+	commitID  string
+	buildDate string
+)
+
 // Argon2EncodeParams is a struct that defines parameters for Argon2Id hashing algorithm.
 type argon2EncodeParams struct {
 	hashTime    uint32
@@ -439,6 +445,18 @@ func main() {
 					if err := existingMnemonicAction(cCtx); err != nil {
 						return err
 					}
+
+					return nil
+				},
+			},
+			{
+				Name:    "version",
+				Usage:   "Print the version\n",
+				Aliases: []string{"v"},
+				Action: func(context *cli.Context) error {
+					fmt.Printf("Version:\t%s\n", version)
+					fmt.Printf("Git Commit:\t%s\n", commitID)
+					fmt.Printf("Build Date:\t%s\n", buildDate)
 
 					return nil
 				},
