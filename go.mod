@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/tyler-smith/assert v1.0.1
-	github.com/urfave/cli/v2 v2.26.0
+	github.com/urfave/cli/v2 v2.27.1
 	golang.org/x/crypto v0.17.0
 )
 
