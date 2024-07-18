@@ -8,7 +8,7 @@ import (
 
 	"bip39/wordlists"
 
-	"github.com/tyler-smith/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type vector struct {
@@ -42,13 +42,13 @@ func TestNewMnemonic(t *testing.T) {
 
 		mnemonic, err := NewMnemonic(entropy)
 		assert.Nil(t, err)
-		assert.EqualString(t, vector.mnemonic, mnemonic)
+		assert.Equal(t, vector.mnemonic, mnemonic)
 
 		_, err = NewSeedWithErrorChecking(mnemonic, "TREZOR")
 		assert.Nil(t, err)
 
 		seed := NewSeed(mnemonic, "TREZOR")
-		assert.EqualString(t, vector.seed, hex.EncodeToString(seed))
+		assert.Equal(t, vector.seed, hex.EncodeToString(seed))
 	}
 }
 
