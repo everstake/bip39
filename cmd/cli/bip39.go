@@ -42,10 +42,10 @@ type argon2EncodeParams struct {
 }
 
 type defaultFlags struct {
-	words      int
-	wordsColor string
 	save       string
 	saveDir    string
+	wordsColor string
+	words      int
 }
 
 func charsetValidate(data string) bool {
@@ -493,7 +493,7 @@ func main() {
 				Name:    "version",
 				Usage:   "Print the version\n",
 				Aliases: []string{"v"},
-				Action: func(context *cli.Context) error {
+				Action: func(cCtx *cli.Context) error {
 					fmt.Printf("Version:\t%s\n", version)
 					fmt.Printf("Git Commit:\t%s\n", commitID)
 					fmt.Printf("Build Date:\t%s\n", buildDate)

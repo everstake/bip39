@@ -9,6 +9,7 @@ repos:
       language: golang
       require_serial: true
       pass_filenames: false
+
     - id: golangci-lint-full
       name: golangci-lint-full
       description: Fast linters runner for Go. Runs on all files in the repo. Use this hook if you use pre-commit in CI.
@@ -17,6 +18,7 @@ repos:
       language: golang
       require_serial: true
       pass_filenames: false
+      
     - id: golangci-lint-config-verify
       name: golangci-lint-config-verify
       description: Verifies the configuration file

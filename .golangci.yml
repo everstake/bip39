@@ -1,8 +1,6 @@
-run:
+issues:
   max-same-issues: 0
   max-issues-per-linter: 0
-
-issues:
   exclude-dirs:
    - wordlists
   exclude-rules:
@@ -33,6 +31,10 @@ issues:
       text: "make it a constant"
       linters:
         - goconst
+    - path: cmd/cli/bip39\.go
+      text: "parameter 'cCtx' seems to be unused"
+      linters:
+        - revive    
 
 linters-settings:
   dupl:
