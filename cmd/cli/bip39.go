@@ -9,8 +9,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/urfave/cli/v2"
-	"golang.org/x/crypto/argon2"
 	"math/big"
 	"os"
 	"os/user"
@@ -22,6 +20,9 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/argon2"
 )
 
 const Charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
