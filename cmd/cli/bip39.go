@@ -7,7 +7,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/argon2"
 	"math/big"
 	"os"
 	"os/user"
@@ -18,9 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/urfave/cli/v2"
-	"golang.org/x/crypto/argon2"
+	"unicode"
 )
 
 const Charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -321,42 +322,73 @@ func generateMnemonicAction(cCtx *cli.Context) error {
 	return nil
 }
 
+func validateMnemonic(mnemonic string) error {
+	// Check for spaces or other characters (other than letters) at the beginning and end of a string
+	if len(mnemonic) > 0 {
+		firstRune := rune(mnemonic[0])
+		lastRune := rune(mnemonic[len(mnemonic)-1])
+
+		if unicode.IsSpace(firstRune) || !unicode.IsLetter(firstRune) {
+			return errors.New("mnemonic contains invalid leading character")
+		}
+		if unicode.IsSpace(lastRune) || !unicode.IsLetter(lastRune) {
+			return errors.New("mnemonic contains invalid trailing character")
+		}
+	}
+
+	// Check for more than one space between words
+	multipleSpacesRegex := regexp.MustCompile(`\s{2,}`)
+	if multipleSpacesRegex.MatchString(mnemonic) {
+		return errors.New("mnemonic contains multiple consecutive spaces")
+	}
+
+	return nil
+}
+
 func existingMnemonicAction(cCtx *cli.Context) error {
+	var err error
+
 	// Prompt for and validate mnemonic
 	fmt.Print("Enter Mnemonic: ")
 
-	mnemonic, err := inputData()
-	if err != nil {
-		return err
-	}
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		mnemonic := scanner.Text()
 
-	if !bip39.IsMnemonicValid(mnemonic) {
-		return fmt.Errorf("%s", "mnemonic is not valid")
-	}
+		// Checking for more than one space between words
+		err = validateMnemonic(mnemonic)
+		if err != nil {
+			return err
+		}
 
-	// Prompt for and validate salt
-	fmt.Print("Enter Argon2 Salt: ")
+		if !bip39.IsMnemonicValid(mnemonic) {
+			return fmt.Errorf("%s", "mnemonic is not valid")
+		}
 
-	salt, err := inputData()
-	if err != nil {
-		return err
-	}
+		// Prompt for and validate salt
+		fmt.Print("Enter Argon2 Salt: ")
 
-	fmt.Print("\n")
+		salt, err := inputData()
+		if err != nil {
+			return err
+		}
 
-	if !charsetValidate(salt) {
-		return fmt.Errorf("%s", "the salt includes characters that are not allowed")
-	}
+		fmt.Print("\n")
 
-	wordsColor := strings.TrimSpace(cCtx.String("color"))
-	save := strings.TrimSpace(cCtx.String("save"))
-	saveDir := strings.TrimSpace(cCtx.String("dir"))
+		if !charsetValidate(salt) {
+			return fmt.Errorf("%s", "the salt includes characters that are not allowed")
+		}
 
-	construct, err := mnemonicConstructAndSave(mnemonic, salt, wordsColor, save, saveDir)
-	if err == nil {
-		fmt.Println(construct)
-	} else {
-		return err
+		wordsColor := strings.TrimSpace(cCtx.String("color"))
+		save := strings.TrimSpace(cCtx.String("save"))
+		saveDir := strings.TrimSpace(cCtx.String("dir"))
+
+		construct, err := mnemonicConstructAndSave(mnemonic, salt, wordsColor, save, saveDir)
+		if err == nil {
+			fmt.Println(construct)
+		} else {
+			return err
+		}
 	}
 
 	return nil
