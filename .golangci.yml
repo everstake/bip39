@@ -1,10 +1,10 @@
 run:
   max-same-issues: 0
   max-issues-per-linter: 0
-  skip-dirs:
-   - wordlists
 
 issues:
+  exclude-dirs:
+   - wordlists
   exclude-rules:
     - path: bip39_test\.go
       text: "Function 'testVectors' is too long"
@@ -50,11 +50,13 @@ linters-settings:
     max-func-lines: 0
   unparam:
     check-exported: false
+  govet:
+    enable:
+      - fieldalignment
 
 linters:
   enable:
     - asciicheck
-    - deadcode
     - depguard
     - dogsled
     - dupl
@@ -68,7 +70,7 @@ linters:
     - godox
     - gofmt
     - goimports
-    - golint
+    - revive
     - gosimple
     - gosec
     - govet
@@ -79,13 +81,11 @@ linters:
     - nakedret
     - nestif
     - prealloc
-    - scopelint
+    - exportloopref
     - staticcheck
-    - structcheck
     - stylecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
     - whitespace
     - wsl
