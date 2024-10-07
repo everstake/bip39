@@ -347,48 +347,50 @@ func validateMnemonic(mnemonic string) error {
 
 func existingMnemonicAction(cCtx *cli.Context) error {
 	var err error
+	var mnemonic string
 
 	// Prompt for and validate mnemonic
 	fmt.Print("Enter Mnemonic: ")
 
 	scanner := bufio.NewScanner(os.Stdin)
-	if scanner.Scan() {
-		mnemonic := scanner.Text()
+	scannerScan := scanner.Scan()
+	if scannerScan {
+		mnemonic = scanner.Text()
+	}
 
-		// Checking for more than one space between words
-		err = validateMnemonic(mnemonic)
-		if err != nil {
-			return err
-		}
+	// Checking for more than one space between words
+	err = validateMnemonic(mnemonic)
+	if err != nil {
+		return err
+	}
 
-		if !bip39.IsMnemonicValid(mnemonic) {
-			return fmt.Errorf("%s", "mnemonic is not valid")
-		}
+	if !bip39.IsMnemonicValid(mnemonic) {
+		return fmt.Errorf("%s", "mnemonic is not valid")
+	}
 
-		// Prompt for and validate salt
-		fmt.Print("Enter Argon2 Salt: ")
+	// Prompt for and validate salt
+	fmt.Print("Enter Argon2 Salt: ")
 
-		salt, err := inputData()
-		if err != nil {
-			return err
-		}
+	salt, err := inputData()
+	if err != nil {
+		return err
+	}
 
-		fmt.Print("\n")
+	fmt.Print("\n")
 
-		if !charsetValidate(salt) {
-			return fmt.Errorf("%s", "the salt includes characters that are not allowed")
-		}
+	if !charsetValidate(salt) {
+		return fmt.Errorf("%s", "the salt includes characters that are not allowed")
+	}
 
-		wordsColor := strings.TrimSpace(cCtx.String("color"))
-		save := strings.TrimSpace(cCtx.String("save"))
-		saveDir := strings.TrimSpace(cCtx.String("dir"))
+	wordsColor := strings.TrimSpace(cCtx.String("color"))
+	save := strings.TrimSpace(cCtx.String("save"))
+	saveDir := strings.TrimSpace(cCtx.String("dir"))
 
-		construct, err := mnemonicConstructAndSave(mnemonic, salt, wordsColor, save, saveDir)
-		if err == nil {
-			fmt.Println(construct)
-		} else {
-			return err
-		}
+	construct, err := mnemonicConstructAndSave(mnemonic, salt, wordsColor, save, saveDir)
+	if err == nil {
+		fmt.Println(construct)
+	} else {
+		return err
 	}
 
 	return nil
