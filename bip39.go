@@ -274,10 +274,12 @@ func addChecksum(data []byte) []byte {
 	hash := computeChecksum(data)
 	firstChecksumByte := hash[0]
 
-	if len(data) > math.MaxUint32*4 {
-		return nil // the data length cannot be negative, but we add a safety check
+	// len() is in bytes so we divide by 4
+	length := len(data) / 4
+	if length < 0 || length > math.MaxUint {
+		return nil
 	}
-	checksumBitLength := uint(len(data) / 4)
+	checksumBitLength := uint(length)
 
 	// For each bit of check sum we want we shift the data one the left
 	// and then set the (new) right most bit equal to checksum bit at that index
