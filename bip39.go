@@ -131,6 +131,9 @@ func EntropyFromMnemonic(mnemonic string) ([]byte, error) {
 			return nil, fmt.Errorf("word `%v` not found in reverse map", v)
 		}
 
+		if index < 0 || index > 65535 {
+			return nil, fmt.Errorf("index value %d is out of range for uint16", index)
+		}
 		binary.BigEndian.PutUint16(wordBytes[:], uint16(index))
 		b.Mul(b, shift11BitsMask)
 		b.Or(b, big.NewInt(0).SetBytes(wordBytes[:]))
@@ -269,6 +272,11 @@ func addChecksum(data []byte) []byte {
 	// Get first byte of sha256
 	hash := computeChecksum(data)
 	firstChecksumByte := hash[0]
+
+	dataLength := len(data)
+	if dataLength < 0 {
+		return nil // the data length cannot be negative, but we add a safety check
+	}
 
 	// len() is in bytes so we divide by 4
 	checksumBitLength := uint(len(data) / 4)
