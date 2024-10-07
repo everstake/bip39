@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"strings"
 
@@ -269,18 +270,14 @@ func IsMnemonicValid(mnemonic string) bool {
 // Appends to data the first (len(data) / 32)bits of the result of sha256(data)
 // Currently only supports data up to 32 bytes.
 func addChecksum(data []byte) []byte {
-	var checksumBitLength uint
-
 	// Get first byte of sha256
 	hash := computeChecksum(data)
 	firstChecksumByte := hash[0]
 
-	if len(data) < 0 {
+	if len(data) > math.MaxUint32*4 {
 		return nil // the data length cannot be negative, but we add a safety check
-	} else {
-		// len() is in bytes so we divide by 4
-		checksumBitLength = uint(len(data) / 4)
 	}
+	checksumBitLength := uint(len(data) / 4)
 
 	// For each bit of check sum we want we shift the data one the left
 	// and then set the (new) right most bit equal to checksum bit at that index
