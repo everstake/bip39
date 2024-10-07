@@ -259,6 +259,7 @@ func mnemonicHighlighting(mnemonicList []string, wordsColor string) string {
 	for i := 1; i < mnemonicLastIndex; i++ {
 		outColorBuffer.WriteString(fmt.Sprintf("%s ", mnemonicList[i]))
 	}
+
 	outColorBuffer.WriteString(wordHighlighting(mnemonicList[mnemonicLastIndex], colors[1]))
 
 	return outColorBuffer.String()
@@ -332,6 +333,7 @@ func validateMnemonic(mnemonic string) error {
 		if unicode.IsSpace(firstRune) || !unicode.IsLetter(firstRune) {
 			return errors.New("mnemonic contains invalid leading character")
 		}
+
 		if unicode.IsSpace(lastRune) || !unicode.IsLetter(lastRune) {
 			return errors.New("mnemonic contains invalid trailing character")
 		}
@@ -348,6 +350,7 @@ func validateMnemonic(mnemonic string) error {
 
 func existingMnemonicAction(cCtx *cli.Context) error {
 	var err error
+
 	var mnemonic string
 
 	// Prompt for and validate mnemonic
