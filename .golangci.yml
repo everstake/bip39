@@ -76,12 +76,11 @@ linters:
     - govet
     - ineffassign
     - lll
-    - maligned
     - misspell
     - nakedret
     - nestif
     - prealloc
-    - exportloopref
+    - copyloopvar
     - staticcheck
     - stylecheck
     - unconvert
