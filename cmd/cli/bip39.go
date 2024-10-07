@@ -353,7 +353,9 @@ func existingMnemonicAction(cCtx *cli.Context) error {
 	fmt.Print("Enter Mnemonic: ")
 
 	scanner := bufio.NewScanner(os.Stdin)
+
 	scannerScan := scanner.Scan()
+
 	if scannerScan {
 		mnemonic = scanner.Text()
 	}
