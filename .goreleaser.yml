@@ -1,3 +1,5 @@
+version: 2
+
 builds:
   - main: ./cmd/cli/bip39.go
     binary: bip39
