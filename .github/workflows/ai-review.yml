@@ -1,0 +1,72 @@
+name: AI PR Review
+
+# Combined merge-gate caller (review job + eval job). Design: ADR-0005.
+# No paths: filter by design — see the ADR before adding one.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  models: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    # Draft is the only caller-level skip: a draft cannot merge, and
+    # ready_for_review fires a fresh run that reports the real context.
+    # Dependabot/fork skips live INSIDE the reusable (skip_dependabot /
+    # skip_forks below) so the check context is still reported as success —
+    # a caller-level `if:` skip reports a different, shorter context and a
+    # required check then hangs forever. Rationale: ADR-0005.
+    if: ${{ github.event.pull_request.draft == false }}
+    permissions:
+      contents: read
+      models: read
+      pull-requests: write
+      issues: write
+    uses: everstake/infra-ai-platform/.github/workflows/ai-pr-review.yml@579156f8f4dabf68087c784cbeb228c3fc58214d # v2.12.1
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      variant: universal
+      # Generated lockfiles carry no review value and inflate the diff.
+      diff_exclude_extra: '^diff --git .*(yarn\.lock|package-lock\.json|pnpm-lock\.yaml|go\.sum)'
+      gate_on_recommendation: true
+      require_codebase: false
+      # Label bypass disabled under a merge gate — the only sanctioned
+      # bypass is the org ruleset's bypass list. Empty matches no label.
+      skip_label: ""
+      skip_dependabot: true
+      skip_forks: true
+      client_id: ${{ vars.AI_REVIEW_APP_CLIENT_ID }}
+      infra_ai_ref: 579156f8f4dabf68087c784cbeb228c3fc58214d
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.AI_REVIEW_APP_PRIVATE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  eval:
+    needs: review
+    # A skipped review concludes SUCCESS (so its check context is reported);
+    # the output is what tells us not to judge a review that never ran.
+    if: ${{ needs.review.outputs.skipped != 'true' }}
+    permissions:
+      contents: read
+      models: read
+      pull-requests: write
+      issues: write
+    uses: everstake/infra-ai-platform/.github/workflows/ai-pr-eval.yml@579156f8f4dabf68087c784cbeb228c3fc58214d # v2.12.1
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      variant: universal
+      # Generated lockfiles carry no review value and inflate the diff.
+      diff_exclude_extra: '^diff --git .*(yarn\.lock|package-lock\.json|pnpm-lock\.yaml|go\.sum)'
+      model: claude-sonnet-5
+      gate_min_score: 9
+      require_codebase: false
+      client_id: ${{ vars.AI_REVIEW_APP_CLIENT_ID }}
+      infra_ai_ref: 579156f8f4dabf68087c784cbeb228c3fc58214d
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.AI_REVIEW_APP_PRIVATE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

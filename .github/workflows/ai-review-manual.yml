@@ -1,0 +1,73 @@
+name: AI PR Review (manual)
+
+# Manually re-run the AI reviewer and/or the judge on any PR. Use after
+# force-pushing, updating prompts, or to refresh a stale review. Deliberately
+# UNGATED (no gate_on_recommendation): its job names give it distinct check
+# contexts, so a manual run can never satisfy a required check.
+#   what=both    review, then eval of the fresh review (default)
+#   what=review  review only
+#   what=eval    judge the LATEST review comment already on the PR (cheap)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number
+        required: true
+        type: string
+      what:
+        description: What to run
+        required: false
+        type: choice
+        options: [both, review, eval]
+        default: both
+
+permissions:
+  contents: read
+  models: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    name: AI PR Review (manual)
+    if: ${{ inputs.what != 'eval' }}
+    permissions:
+      contents: read
+      models: read
+      pull-requests: write
+      issues: write
+    uses: everstake/infra-ai-platform/.github/workflows/ai-pr-review.yml@579156f8f4dabf68087c784cbeb228c3fc58214d # v2.12.1
+    with:
+      pr_number: ${{ inputs.pr_number }}
+      variant: universal
+      # Generated lockfiles carry no review value and inflate the diff.
+      diff_exclude_extra: '^diff --git .*(yarn\.lock|package-lock\.json|pnpm-lock\.yaml|go\.sum)'
+      client_id: ${{ vars.AI_REVIEW_APP_CLIENT_ID }}
+      infra_ai_ref: 579156f8f4dabf68087c784cbeb228c3fc58214d
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.AI_REVIEW_APP_PRIVATE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  eval:
+    name: AI PR Eval (manual)
+    needs: review
+    # Runs after a successful review, or alone when what=eval (review skipped).
+    if: ${{ !cancelled() && inputs.what != 'review' && needs.review.result != 'failure' }}
+    permissions:
+      contents: read
+      models: read
+      pull-requests: write
+      issues: write
+    uses: everstake/infra-ai-platform/.github/workflows/ai-pr-eval.yml@579156f8f4dabf68087c784cbeb228c3fc58214d # v2.12.1
+    with:
+      pr_number: ${{ inputs.pr_number }}
+      variant: universal
+      model: claude-sonnet-5
+      require_codebase: false
+      diff_exclude_extra: '^diff --git .*(yarn\.lock|package-lock\.json|pnpm-lock\.yaml|go\.sum)'
+      client_id: ${{ vars.AI_REVIEW_APP_CLIENT_ID }}
+      infra_ai_ref: 579156f8f4dabf68087c784cbeb228c3fc58214d
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.AI_REVIEW_APP_PRIVATE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
